@@ -114,6 +114,14 @@ export default function Chart2D({ processed }: Chart2DProps) {
     };
   }, [clampedActive, series]);
 
+  const activePoints = series[clampedActive].data;
+  const maxDepth = activePoints.length > 0
+    ? Math.min(...activePoints.map(([, d]) => d))
+    : 0;
+  const duration = activePoints.length > 0
+    ? activePoints[activePoints.length - 1][0] - activePoints[0][0]
+    : 0;
+
   return (
     <div className="chart-container">
       <ReactECharts
@@ -126,6 +134,9 @@ export default function Chart2D({ processed }: Chart2DProps) {
       <div className="slider-container">
         <label className="slider-label">
           Active: <strong>{series[clampedActive].label}</strong>
+          <span className="slider-stats">
+            Maximum depth: {maxDepth.toFixed(1)}m | Duration: {Math.floor(duration / 60)}m{String(duration % 60).padStart(2, "0")}s
+          </span>
         </label>
         <input
           type="range"

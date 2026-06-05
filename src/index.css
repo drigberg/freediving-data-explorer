@@ -221,6 +221,12 @@ body,
   color: #6e7681;
 }
 
+.slider-stats {
+  font-size: 0.8rem;
+  color: #58a6ff;
+  font-weight: 500;
+}
+
 .series-slider {
   width: 100%;
   max-width: 600px;

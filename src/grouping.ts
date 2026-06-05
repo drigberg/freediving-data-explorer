@@ -216,7 +216,7 @@ function coalesceAverage(
       const normalizedT = dur > 0 ? (t / avgDuration) * dur : 0;
       depthSum += interpolateAt(points, normalizedT + points[0][0]);
     }
-    result.push([t, depthSum / indices.length]);
+    result.push([t, Math.round((depthSum / indices.length) * 10) / 10]);
   }
 
   return result;
