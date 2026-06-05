@@ -254,6 +254,13 @@ function coalesceDeepest(
   return { pickedIndex: best, data: seriesData[best] };
 }
 
+function ensureTrailingZero(points: [number, number][]): [number, number][] {
+  if (points.length > 0 && points[points.length - 1][1] !== 0) {
+    return [...points, [points[points.length - 1][0] + 2, 0]];
+  }
+  return points;
+}
+
 // ── Main processing ──
 
 export function processData(
@@ -305,7 +312,7 @@ export function processData(
       label = `${group.label} [${dateMatch}]`;
     }
 
-    return { label, data: seriesPoints };
+    return { label, data: ensureTrailingZero(seriesPoints) };
   });
 
   return { series };

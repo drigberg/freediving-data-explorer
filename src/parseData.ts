@@ -31,5 +31,12 @@ export function parseDiveData(): DiveData {
     }
   }
 
+  const timeStep = 2;
+  for (const points of seriesData) {
+    if (points.length > 0 && points[points.length - 1][1] !== 0) {
+      points.push([points[points.length - 1][0] + timeStep, 0]);
+    }
+  }
+
   return { seriesNames, seriesData };
 }
