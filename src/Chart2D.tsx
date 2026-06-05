@@ -78,6 +78,7 @@ export default function Chart2D({ processed }: Chart2DProps) {
           data: s.data,
           smooth: true,
           showSymbol: false,
+          itemStyle: { color },
           lineStyle: {
             width: isActive ? 3 : 1.5,
             color,

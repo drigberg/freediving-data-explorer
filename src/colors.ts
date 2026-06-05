@@ -1,23 +1,20 @@
-/**
- * Returns an HSL color string interpolated from red (oldest, index 0)
- * to cyan (most recent, index total-1).
- */
-export function getSeriesColor(index: number, total: number): string {
-  const hue = total <= 1 ? 180 : (index / (total - 1)) * 180;
-  return `hsl(${hue}, 100%, 50%)`;
+const HUE_START = 30; // orange
+const HUE_END = 180;  // cyan
+
+function seriesHue(index: number, total: number): number {
+  return total <= 1 ? HUE_END : HUE_START + (index / (total - 1)) * (HUE_END - HUE_START);
 }
 
-/**
- * Returns an rgba color string with the given opacity, derived from
- * the series HSL color.
- */
+export function getSeriesColor(index: number, total: number): string {
+  return `hsl(${seriesHue(index, total)}, 100%, 50%)`;
+}
+
 export function getSeriesColorRgba(
   index: number,
   total: number,
   alpha: number
 ): string {
-  const hue = total <= 1 ? 180 : (index / (total - 1)) * 180;
-  return `hsla(${hue}, 100%, 50%, ${alpha})`;
+  return `hsla(${seriesHue(index, total)}, 100%, 50%, ${alpha})`;
 }
 
 /**
