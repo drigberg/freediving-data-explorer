@@ -1,36 +1,41 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
-import type { DiveData } from "./parseData";
+import type { ProcessedData } from "./grouping";
 import {
   getSeriesColor,
   getSeriesColorRgba,
   getSeriesOpacity,
-  shortDateLabel,
 } from "./colors";
 
 interface Chart2DProps {
-  data: DiveData;
+  processed: ProcessedData;
 }
 
-export default function Chart2D({ data }: Chart2DProps) {
-  const { seriesNames, seriesData } = data;
-  const [activeIndex, setActiveIndex] = useState(seriesNames.length - 1);
+export default function Chart2D({ processed }: Chart2DProps) {
+  const { series } = processed;
+  const [activeIndex, setActiveIndex] = useState(series.length - 1);
+
+  useEffect(() => {
+    setActiveIndex(series.length - 1);
+  }, [series.length]);
+
+  const clampedActive = Math.min(activeIndex, series.length - 1);
 
   const option = useMemo<EChartsOption>(() => {
-    const total = seriesNames.length;
+    const total = series.length;
 
     return {
       backgroundColor: "transparent",
       tooltip: {
         trigger: "axis",
         backgroundColor: "rgba(13, 17, 23, 0.9)",
-        borderColor: getSeriesColor(activeIndex, total),
+        borderColor: getSeriesColor(clampedActive, total),
         borderWidth: 1,
         textStyle: { color: "#e6edf3", fontSize: 12 },
       },
       legend: {
-        data: seriesNames.map((name) => shortDateLabel(name)),
+        data: series.map((s) => s.label),
         textStyle: { color: "#8b949e", fontSize: 11 },
         top: 8,
         type: "scroll",
@@ -62,15 +67,15 @@ export default function Chart2D({ data }: Chart2DProps) {
         axisLabel: { color: "#8b949e" },
         splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
       },
-      series: seriesNames.map((name, i) => {
-        const opacity = getSeriesOpacity(i, activeIndex, total);
+      series: series.map((s, i) => {
+        const opacity = getSeriesOpacity(i, clampedActive, total);
         const color = getSeriesColor(i, total);
-        const isActive = i === activeIndex;
+        const isActive = i === clampedActive;
 
         return {
-          name: shortDateLabel(name),
+          name: s.label,
           type: "line" as const,
-          data: seriesData[i],
+          data: s.data,
           smooth: true,
           showSymbol: false,
           lineStyle: {
@@ -88,7 +93,14 @@ export default function Chart2D({ data }: Chart2DProps) {
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: getSeriesColorRgba(i, total, isActive ? 0.25 : 0.08 * opacity) },
+                {
+                  offset: 0,
+                  color: getSeriesColorRgba(
+                    i,
+                    total,
+                    isActive ? 0.25 : 0.08 * opacity
+                  ),
+                },
                 { offset: 1, color: getSeriesColorRgba(i, total, 0) },
               ],
             },
@@ -99,34 +111,32 @@ export default function Chart2D({ data }: Chart2DProps) {
       animation: true,
       animationDuration: 400,
     };
-  }, [activeIndex, seriesNames, seriesData]);
+  }, [clampedActive, series]);
 
   return (
     <div className="chart-container">
       <ReactECharts
         option={option}
+        notMerge={true}
         style={{ height: "100%", width: "100%" }}
         opts={{ renderer: "canvas" }}
         theme="dark"
       />
       <div className="slider-container">
         <label className="slider-label">
-          Active: <strong>{shortDateLabel(seriesNames[activeIndex])}</strong>
-          <span className="slider-sublabel">
-            {seriesNames[activeIndex]}
-          </span>
+          Active: <strong>{series[clampedActive].label}</strong>
         </label>
         <input
           type="range"
           min={0}
-          max={seriesNames.length - 1}
-          value={activeIndex}
+          max={series.length - 1}
+          value={clampedActive}
           onChange={(e) => setActiveIndex(Number(e.target.value))}
           className="series-slider"
         />
         <div className="slider-endpoints">
-          <span>{shortDateLabel(seriesNames[0])}</span>
-          <span>{shortDateLabel(seriesNames[seriesNames.length - 1])}</span>
+          <span>{series[0].label}</span>
+          <span>{series[series.length - 1].label}</span>
         </div>
       </div>
     </div>

@@ -1,18 +1,18 @@
 import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import "echarts-gl";
-import type { DiveData } from "./parseData";
-import { getSeriesColor, shortDateLabel } from "./colors";
+import type { ProcessedData } from "./grouping";
+import { getSeriesColor } from "./colors";
 
 interface Chart3DProps {
-  data: DiveData;
+  processed: ProcessedData;
 }
 
-export default function Chart3D({ data }: Chart3DProps) {
-  const { seriesNames, seriesData } = data;
+export default function Chart3D({ processed }: Chart3DProps) {
+  const { series } = processed;
 
   const option = useMemo(() => {
-    const total = seriesNames.length;
+    const total = series.length;
 
     return {
       backgroundColor: "transparent",
@@ -51,7 +51,7 @@ export default function Chart3D({ data }: Chart3DProps) {
           color: "#8b949e",
           formatter: (value: number) => {
             const idx = Math.round(value);
-            if (idx >= 0 && idx < total) return shortDateLabel(seriesNames[idx]);
+            if (idx >= 0 && idx < total) return series[idx].label;
             return "";
           },
         },
@@ -65,14 +65,14 @@ export default function Chart3D({ data }: Chart3DProps) {
         axisLabel: { color: "#8b949e" },
         splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.3)" } },
       },
-      series: seriesNames.map((name, i) => {
+      series: series.map((s, i) => {
         const color = getSeriesColor(i, total);
-        const points: [number, number, number][] = seriesData[i].map(
+        const points: [number, number, number][] = s.data.map(
           ([time, depth]) => [time, i, depth]
         );
 
         return {
-          name: shortDateLabel(name),
+          name: s.label,
           type: "line3D",
           data: points,
           lineStyle: {
@@ -85,17 +85,20 @@ export default function Chart3D({ data }: Chart3DProps) {
         };
       }),
     };
-  }, [seriesNames, seriesData]);
+  }, [series]);
 
   return (
     <div className="chart-container">
       <ReactECharts
         option={option}
+        notMerge={true}
         style={{ height: "100%", width: "100%" }}
         opts={{ renderer: "canvas" }}
         theme="dark"
       />
-      <p className="chart-hint">Drag to rotate, scroll to zoom, right-click to pan</p>
+      <p className="chart-hint">
+        Drag to rotate, scroll to zoom, right-click to pan
+      </p>
     </div>
   );
 }

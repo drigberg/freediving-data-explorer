@@ -72,6 +72,99 @@ body,
   background: rgba(255, 255, 255, 0.04);
 }
 
+/* ── Grouping controls ── */
+
+.grouping-controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.grouping-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grouping-label {
+  font-size: 0.8rem;
+  color: #8b949e;
+  white-space: nowrap;
+  min-width: 56px;
+}
+
+.segment-buttons {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.segment-buttons button {
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: #8b949e;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.segment-buttons button + button {
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.segment-buttons button.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e6edf3;
+}
+
+.segment-buttons button:hover:not(.active) {
+  color: #c9d1d9;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.grouping-slider {
+  width: 120px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  cursor: pointer;
+}
+
+.grouping-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #58a6ff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 6px rgba(88, 166, 255, 0.35);
+  cursor: pointer;
+}
+
+.grouping-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #58a6ff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 6px rgba(88, 166, 255, 0.35);
+  cursor: pointer;
+}
+
 /* ── Main chart area ── */
 
 .app-main {

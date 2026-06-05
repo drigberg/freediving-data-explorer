@@ -31,7 +31,8 @@ export function getSeriesOpacity(
 ): number {
   if (total <= 1) return 1.0;
   const distance = Math.abs(index - activeIndex);
-  return Math.max(0.2, 1.0 - (distance / (total - 1)) * 0.8);
+  const stepSize = Math.min(0.1, 0.8 / (total - 1));
+  return Math.max(0.2, 1.0 - distance * stepSize);
 }
 
 /**
