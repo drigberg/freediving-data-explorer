@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { parseDiveData } from "./parseData";
+import type { DiveData } from "./parseData";
 import {
   defaultGroupingConfig,
   processData,
   type GroupingConfig,
 } from "./grouping";
 import GroupingControls from "./GroupingControls";
+import Sidebar from "./Sidebar";
 import Chart2D from "./Chart2D";
 import Chart3D from "./Chart3D";
 
@@ -14,13 +16,38 @@ type ViewMode = "2d" | "3d";
 export default function App() {
   const data = useMemo(() => parseDiveData(), []);
   const [mode, setMode] = useState<ViewMode>("2d");
+  const [hiddenDives, setHiddenDives] = useState<Set<number>>(new Set());
   const [groupingConfig, setGroupingConfig] = useState<GroupingConfig>(() =>
     defaultGroupingConfig(data.seriesNames.length)
   );
 
+  const toggleVisibility = useCallback((index: number) => {
+    setHiddenDives((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }, []);
+
+  const filteredData = useMemo<DiveData>(() => {
+    const seriesNames: string[] = [];
+    const seriesData: [number, number][][] = [];
+    for (let i = 0; i < data.seriesNames.length; i++) {
+      if (!hiddenDives.has(i)) {
+        seriesNames.push(data.seriesNames[i]);
+        seriesData.push(data.seriesData[i]);
+      }
+    }
+    return { seriesNames, seriesData };
+  }, [data, hiddenDives]);
+
   const processed = useMemo(
-    () => processData(data, groupingConfig),
-    [data, groupingConfig]
+    () => processData(filteredData, groupingConfig),
+    [filteredData, groupingConfig]
   );
 
   return (
@@ -44,16 +71,23 @@ export default function App() {
       </header>
       <GroupingControls
         config={groupingConfig}
-        totalSeries={data.seriesNames.length}
+        totalSeries={filteredData.seriesNames.length}
         onChange={setGroupingConfig}
       />
-      <main className="app-main">
-        {mode === "2d" ? (
-          <Chart2D processed={processed} />
-        ) : (
-          <Chart3D processed={processed} />
-        )}
-      </main>
+      <div className="app-body">
+        <Sidebar
+          seriesNames={data.seriesNames}
+          hiddenDives={hiddenDives}
+          onToggleVisibility={toggleVisibility}
+        />
+        <main className="app-main">
+          {mode === "2d" ? (
+            <Chart2D processed={processed} />
+          ) : (
+            <Chart3D processed={processed} />
+          )}
+        </main>
+      </div>
     </div>
   );
 }
