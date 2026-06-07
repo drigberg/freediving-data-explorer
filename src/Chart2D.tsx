@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import type { ProcessedData } from "./grouping";
@@ -8,15 +8,47 @@ interface Chart2DProps {
   processed: ProcessedData;
 }
 
+type SeriesEventParams = {
+  componentType?: string;
+  seriesIndex?: number;
+};
+
 export default function Chart2D({ processed }: Chart2DProps) {
   const { series } = processed;
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
+  const [hoveringLine, setHoveringLine] = useState(false);
 
   useEffect(() => {
     setActiveIndex(series.length - 1);
   }, [series.length]);
 
   const clampedActive = Math.min(activeIndex, series.length - 1);
+
+  const handleSeriesClick = useCallback((params: SeriesEventParams) => {
+    if (params.componentType === "series" && params.seriesIndex != null) {
+      setActiveIndex(params.seriesIndex);
+    }
+  }, []);
+
+  const handleSeriesMouseOver = useCallback((params: SeriesEventParams) => {
+    if (params.componentType === "series" && params.seriesIndex != null) {
+      setHoveringLine(true);
+    }
+  }, []);
+
+  const handleSeriesMouseOut = useCallback(() => {
+    setHoveringLine(false);
+  }, []);
+
+  const chartEvents = useMemo(
+    () => ({
+      click: handleSeriesClick,
+      mouseover: handleSeriesMouseOver,
+      mouseout: handleSeriesMouseOut,
+      globalout: handleSeriesMouseOut,
+    }),
+    [handleSeriesClick, handleSeriesMouseOver, handleSeriesMouseOut],
+  );
 
   const option = useMemo<EChartsOption>(() => {
     const total = series.length;
@@ -74,6 +106,7 @@ export default function Chart2D({ processed }: Chart2DProps) {
           data: s.data,
           smooth: true,
           showSymbol: false,
+          triggerLineEvent: true,
           itemStyle: { color },
           lineStyle: {
             width: isActive ? 3 : 1.5,
@@ -82,26 +115,24 @@ export default function Chart2D({ processed }: Chart2DProps) {
             shadowBlur: isActive ? 16 : 8,
             shadowColor: getSeriesColorRgba(i, total, isActive ? 0.6 : 0.25),
           },
-          areaStyle: {
-            color: {
-              type: "linear" as const,
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                {
-                  offset: 0,
-                  color: getSeriesColorRgba(
-                    i,
-                    total,
-                    isActive ? 0.25 : 0.08 * opacity,
-                  ),
-                },
-                { offset: 1, color: getSeriesColorRgba(i, total, 0) },
-              ],
+          ...(isActive && {
+            areaStyle: {
+              color: {
+                type: "linear" as const,
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  {
+                    offset: 0,
+                    color: getSeriesColorRgba(i, total, 0.25),
+                  },
+                  { offset: 1, color: getSeriesColorRgba(i, total, 0) },
+                ],
+              },
             },
-          },
+          }),
           z: isActive ? 10 : 1,
         };
       }),
@@ -120,13 +151,18 @@ export default function Chart2D({ processed }: Chart2DProps) {
 
   return (
     <div className="chart-container">
-      <ReactECharts
-        option={option}
-        notMerge={true}
-        style={{ height: "100%", width: "100%" }}
-        opts={{ renderer: "canvas" }}
-        theme="dark"
-      />
+      <div
+        className={`chart-plot${hoveringLine ? " chart-plot--hover-line" : ""}`}
+      >
+        <ReactECharts
+          option={option}
+          notMerge={true}
+          style={{ height: "100%", width: "100%" }}
+          opts={{ renderer: "canvas" }}
+          theme="dark"
+          onEvents={chartEvents}
+        />
+      </div>
       <div className="slider-container">
         <label className="slider-label">
           Active: <strong>{series[clampedActive].label}</strong>

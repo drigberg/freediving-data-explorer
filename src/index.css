@@ -889,9 +889,13 @@ body,
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.chart-container > div:first-child {
+.chart-plot {
   flex: 1;
   min-height: 0;
+}
+
+.chart-plot--hover-line {
+  cursor: pointer;
 }
 
 /* ── Slider ── */
