@@ -1,23 +1,20 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { shortDateLabel } from "./colors";
 import TagDialog from "./TagDialog";
-
+import DisciplineDialog from "./DisciplineDialog";
+import EditDialog from "./AddTagDialog";
+import { disciplineAbbrev } from "./disciplines";
 import type { Tag } from "./grouping";
-
-const DISCIPLINE_ABBREV: Record<string, string> = {
-  "Free Immersion": "FI",
-  "No-Fins": "CNF",
-  "Bi-Fins": "CWTB",
-  "Mono-Fin": "CWT",
-};
 
 interface SidebarProps {
   seriesNames: string[];
   seriesData: [number, number][][];
+  disciplines: (string | undefined)[];
   hiddenDives: Set<number>;
   onToggleVisibility: (index: number) => void;
   tags: Tag[];
   onTagsChange: (tags: Tag[]) => void;
+  onDisciplinesAssign: (indices: number[], discipline: string) => void;
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -86,12 +83,16 @@ function formatDuration(seconds: number): string {
 export default function Sidebar({
   seriesNames,
   seriesData,
+  disciplines,
   hiddenDives,
   onToggleVisibility,
   tags,
   onTagsChange,
+  onDisciplinesAssign,
 }: SidebarProps) {
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
+  const [showDisciplineDialog, setShowDisciplineDialog] = useState(false);
   const [expandedDives, setExpandedDives] = useState<Set<number>>(new Set());
 
   const toggleExpanded = useCallback((index: number) => {
@@ -107,19 +108,24 @@ export default function Sidebar({
   }, []);
 
   const [taggingMode, setTaggingMode] = useState<string | null>(null);
-  const [tagSelection, setTagSelection] = useState<Set<number>>(new Set());
+  const [disciplineAssignMode, setDisciplineAssignMode] = useState<
+    string | null
+  >(null);
+  const [selection, setSelection] = useState<Set<number>>(new Set());
   const lastClickedRef = useRef<number | null>(null);
+
+  const inSelectMode = taggingMode !== null || disciplineAssignMode !== null;
 
   const handleCreateTag = useCallback(
     (name: string) => {
       const existing = tags.find((t) => t.name === name);
       if (existing) {
         setTaggingMode(name);
-        setTagSelection(new Set(existing.diveIndices));
+        setSelection(new Set(existing.diveIndices));
       } else {
         onTagsChange([...tags, { name, diveIndices: new Set() }]);
         setTaggingMode(name);
-        setTagSelection(new Set());
+        setSelection(new Set());
       }
       setShowTagDialog(false);
     },
@@ -130,36 +136,54 @@ export default function Sidebar({
     (name: string) => {
       const tag = tags.find((t) => t.name === name);
       setTaggingMode(name);
-      setTagSelection(new Set(tag?.diveIndices ?? []));
+      setSelection(new Set(tag?.diveIndices ?? []));
       setShowTagDialog(false);
     },
     [tags],
   );
 
-  const handleTagDone = useCallback(() => {
-    if (!taggingMode) return;
-    onTagsChange(
-      tags.map((t) =>
-        t.name === taggingMode
-          ? { ...t, diveIndices: new Set(tagSelection) }
-          : t,
-      ),
-    );
-    setTaggingMode(null);
-    setTagSelection(new Set());
+  const handleSelectDiscipline = useCallback((discipline: string) => {
+    setDisciplineAssignMode(discipline);
+    setSelection(new Set());
+    setShowDisciplineDialog(false);
     lastClickedRef.current = null;
-  }, [taggingMode, tagSelection, tags, onTagsChange]);
+  }, []);
 
-  const handleTagCancel = useCallback(() => {
+  const handleDone = useCallback(() => {
+    if (taggingMode) {
+      onTagsChange(
+        tags.map((t) =>
+          t.name === taggingMode
+            ? { ...t, diveIndices: new Set(selection) }
+            : t,
+        ),
+      );
+      setTaggingMode(null);
+    } else if (disciplineAssignMode) {
+      onDisciplinesAssign([...selection], disciplineAssignMode);
+      setDisciplineAssignMode(null);
+    }
+    setSelection(new Set());
+    lastClickedRef.current = null;
+  }, [
+    taggingMode,
+    disciplineAssignMode,
+    selection,
+    tags,
+    onTagsChange,
+    onDisciplinesAssign,
+  ]);
+
+  const handleCancel = useCallback(() => {
     setTaggingMode(null);
-    setTagSelection(new Set());
+    setDisciplineAssignMode(null);
+    setSelection(new Set());
     lastClickedRef.current = null;
   }, []);
 
   const tagsByDive = useMemo(() => {
     const map = new Map<number, string[]>();
     for (const tag of tags) {
-      if (tag.name.startsWith("Discipline:")) continue;
       for (const idx of tag.diveIndices) {
         if (!map.has(idx)) map.set(idx, []);
         map.get(idx)!.push(tag.name);
@@ -168,51 +192,40 @@ export default function Sidebar({
     return map;
   }, [tags]);
 
-  const disciplineByDive = useMemo(() => {
-    const map = new Map<number, { abbrev: string; name: string }>();
-    for (const tag of tags) {
-      const match = tag.name.match(/^Discipline:\s*(.+)$/);
-      if (!match) continue;
-      const abbrev = DISCIPLINE_ABBREV[match[1]];
-      if (!abbrev) continue;
-      for (const idx of tag.diveIndices) {
-        map.set(idx, { abbrev, name: match[1] });
-      }
-    }
-    return map;
-  }, [tags]);
-
-  const handleTagClick = useCallback((index: number, shiftKey: boolean) => {
-    setTagSelection((prev) => {
-      const next = new Set(prev);
-      if (shiftKey && lastClickedRef.current !== null) {
-        const from = Math.min(lastClickedRef.current, index);
-        const to = Math.max(lastClickedRef.current, index);
-        for (let i = from; i <= to; i++) {
-          next.add(i);
-        }
-      } else {
-        if (next.has(index)) {
-          next.delete(index);
+  const handleSelectionClick = useCallback(
+    (index: number, shiftKey: boolean) => {
+      setSelection((prev) => {
+        const next = new Set(prev);
+        if (shiftKey && lastClickedRef.current !== null) {
+          const from = Math.min(lastClickedRef.current, index);
+          const to = Math.max(lastClickedRef.current, index);
+          for (let i = from; i <= to; i++) {
+            next.add(i);
+          }
         } else {
-          next.add(index);
+          if (next.has(index)) {
+            next.delete(index);
+          } else {
+            next.add(index);
+          }
         }
-      }
-      lastClickedRef.current = index;
-      return next;
-    });
-  }, []);
+        lastClickedRef.current = index;
+        return next;
+      });
+    },
+    [],
+  );
 
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         <h2>Dives</h2>
         <button
-          className="sidebar-add-tag"
-          onClick={() => setShowTagDialog(true)}
-          disabled={taggingMode !== null}
+          className="sidebar-header-btn"
+          onClick={() => setShowEditDialog(true)}
+          disabled={inSelectMode}
         >
-          + Add tag
+          Add Tag
         </button>
       </div>
 
@@ -222,10 +235,27 @@ export default function Sidebar({
             Select dives to tag with <strong>{taggingMode}</strong>
           </span>
           <div className="sidebar-tag-actions">
-            <button className="tag-action-btn done" onClick={handleTagDone}>
+            <button className="tag-action-btn done" onClick={handleDone}>
               Done
             </button>
-            <button className="tag-action-btn cancel" onClick={handleTagCancel}>
+            <button className="tag-action-btn cancel" onClick={handleCancel}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {disciplineAssignMode && (
+        <div className="sidebar-tag-banner">
+          <span>
+            Select dives to assign discipline{" "}
+            <strong>{disciplineAssignMode}</strong>
+          </span>
+          <div className="sidebar-tag-actions">
+            <button className="tag-action-btn done" onClick={handleDone}>
+              Done
+            </button>
+            <button className="tag-action-btn cancel" onClick={handleCancel}>
               Cancel
             </button>
           </div>
@@ -236,21 +266,22 @@ export default function Sidebar({
         {[...seriesNames.keys()].reverse().map((i) => {
           const name = seriesNames[i];
           const isHidden = hiddenDives.has(i);
-          const isSelected = tagSelection.has(i);
+          const isSelected = selection.has(i);
+          const discipline = disciplines[i];
 
-          const discipline = disciplineByDive.get(i);
-
-          if (taggingMode) {
+          if (inSelectMode) {
             return (
               <li
                 key={i}
                 className={`sidebar-dive-item tagging ${isSelected ? "selected" : ""}`}
-                onClick={(e) => handleTagClick(i, e.shiftKey)}
+                onClick={(e) => handleSelectionClick(i, e.shiftKey)}
               >
                 <span className="tag-checkbox">{isSelected ? "✓" : ""}</span>
                 <span className="dive-name">{shortDateLabel(name)}</span>
                 {discipline && (
-                  <span className="dive-discipline">{discipline.abbrev}</span>
+                  <span className="dive-discipline">
+                    {disciplineAbbrev(discipline)}
+                  </span>
                 )}
               </li>
             );
@@ -284,7 +315,9 @@ export default function Sidebar({
                   {shortDateLabel(name)}
                 </span>
                 {discipline && (
-                  <span className="dive-discipline">{discipline.abbrev}</span>
+                  <span className="dive-discipline">
+                    {disciplineAbbrev(discipline)}
+                  </span>
                 )}
                 <span
                   className="dive-chevron"
@@ -301,6 +334,11 @@ export default function Sidebar({
                   <li className="dive-detail-item">
                     Duration: {formatDuration(duration)}
                   </li>
+                  {discipline && (
+                    <li className="dive-detail-item">
+                      Discipline: {discipline}
+                    </li>
+                  )}
                   {diveTags.map((tagName) => (
                     <li key={tagName} className="dive-detail-item">
                       {tagName}
@@ -313,6 +351,20 @@ export default function Sidebar({
         })}
       </ul>
 
+      {showEditDialog && (
+        <EditDialog
+          onAssignDiscipline={() => {
+            setShowEditDialog(false);
+            setShowDisciplineDialog(true);
+          }}
+          onAddTag={() => {
+            setShowEditDialog(false);
+            setShowTagDialog(true);
+          }}
+          onClose={() => setShowEditDialog(false)}
+        />
+      )}
+
       {showTagDialog && (
         <TagDialog
           existingTags={tags.map((t) => ({
@@ -322,6 +374,21 @@ export default function Sidebar({
           onCreateTag={handleCreateTag}
           onSelectTag={handleSelectTag}
           onClose={() => setShowTagDialog(false)}
+          onBack={() => {
+            setShowTagDialog(false);
+            setShowEditDialog(true);
+          }}
+        />
+      )}
+
+      {showDisciplineDialog && (
+        <DisciplineDialog
+          onSelect={handleSelectDiscipline}
+          onClose={() => setShowDisciplineDialog(false)}
+          onBack={() => {
+            setShowDisciplineDialog(false);
+            setShowEditDialog(true);
+          }}
         />
       )}
     </aside>

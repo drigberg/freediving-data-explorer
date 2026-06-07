@@ -1,24 +1,13 @@
 import { useState } from "react";
 
-type TagCategory =
-  | "discipline"
-  | "weight"
-  | "safety"
-  | "exposureSuit"
-  | "other";
-
-const DISCIPLINES = [
-  "Free Immersion",
-  "No-Fins",
-  "Bi-Fins",
-  "Mono-Fin",
-] as const;
+type TagCategory = "weight" | "safety" | "exposureSuit" | "other";
 
 interface TagDialogProps {
   existingTags: { name: string; count: number }[];
   onCreateTag: (name: string) => void;
   onSelectTag: (name: string) => void;
   onClose: () => void;
+  onBack: () => void;
 }
 
 export default function TagDialog({
@@ -26,10 +15,10 @@ export default function TagDialog({
   onCreateTag,
   onSelectTag,
   onClose,
+  onBack,
 }: TagDialogProps) {
   const [category, setCategory] = useState<TagCategory | null>(null);
 
-  const [discipline, setDiscipline] = useState<string>(DISCIPLINES[0]);
   const [weight, setWeight] = useState("");
   const [safety, setSafety] = useState(true);
   const [openCell, setOpenCell] = useState(false);
@@ -38,8 +27,6 @@ export default function TagDialog({
 
   function buildTagName(): string | null {
     switch (category) {
-      case "discipline":
-        return `Discipline: ${discipline}`;
       case "weight": {
         const w = parseFloat(weight);
         return isNaN(w) ? null : `Weight: ${w}kg`;
@@ -67,7 +54,6 @@ export default function TagDialog({
   const canCreate = tagName !== null;
 
   const categories: { id: TagCategory; label: string }[] = [
-    { id: "discipline", label: "Discipline" },
     { id: "weight", label: "Weight" },
     { id: "safety", label: "Safety" },
     { id: "exposureSuit", label: "Exposure Suit" },
@@ -77,6 +63,9 @@ export default function TagDialog({
   return (
     <div className="tag-dialog-overlay" onClick={onClose}>
       <div className="tag-dialog" onClick={(e) => e.stopPropagation()}>
+        <button type="button" className="dialog-back-btn" onClick={onBack}>
+          Back
+        </button>
         <h3>Add Tag</h3>
 
         <div className="tag-category-picker">
@@ -90,22 +79,6 @@ export default function TagDialog({
             </button>
           ))}
         </div>
-
-        {category === "discipline" && (
-          <div className="tag-form">
-            <div className="tag-form-row">
-              {DISCIPLINES.map((d) => (
-                <button
-                  key={d}
-                  className={`tag-option ${discipline === d ? "active" : ""}`}
-                  onClick={() => setDiscipline(d)}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {category === "weight" && (
           <div className="tag-form">

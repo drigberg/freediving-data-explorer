@@ -2,7 +2,12 @@ import type { DiveData } from "./parseData";
 
 // ── Types ──
 
-export type GroupMode = "none" | "dateInterval" | "n" | "percentile" | "discipline";
+export type GroupMode =
+  | "none"
+  | "dateInterval"
+  | "n"
+  | "percentile"
+  | "discipline";
 export type DateIntervalUnit = "month" | "quarter" | "year";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
@@ -53,7 +58,7 @@ function parseDate(seriesName: string): Date | null {
   return new Date(
     parseInt(match[1], 10),
     parseInt(match[2], 10) - 1,
-    parseInt(match[3], 10)
+    parseInt(match[3], 10),
   );
 }
 
@@ -67,16 +72,25 @@ function getMaxDepth(points: [number, number][]): number {
   return Math.min(...points.map(([, d]) => d));
 }
 
-function dateIntervalKey(
-  date: Date,
-  unit: DateIntervalUnit
-): string {
+function dateIntervalKey(date: Date, unit: DateIntervalUnit): string {
   const y = date.getFullYear();
   const m = date.getMonth();
   switch (unit) {
     case "month": {
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
       return `${months[m]} ${y}`;
     }
     case "quarter":
@@ -116,10 +130,7 @@ function groupByNone(data: DiveData): Group[] {
   }));
 }
 
-function groupByDateInterval(
-  data: DiveData,
-  unit: DateIntervalUnit
-): Group[] {
+function groupByDateInterval(data: DiveData, unit: DateIntervalUnit): Group[] {
   const buckets = new Map<string, number[]>();
   const bucketOrder: string[] = [];
 
@@ -147,8 +158,10 @@ function groupByN(data: DiveData, n: number): Group[] {
       indices.push(j);
     }
     const firstLabel = data.seriesNames[indices[0]].match(/^[\d-]+/)?.[0] ?? "";
-    const lastLabel = data.seriesNames[indices[indices.length - 1]].match(/^[\d-]+/)?.[0] ?? "";
-    const label = indices.length === 1 ? firstLabel : `${firstLabel} – ${lastLabel}`;
+    const lastLabel =
+      data.seriesNames[indices[indices.length - 1]].match(/^[\d-]+/)?.[0] ?? "";
+    const label =
+      indices.length === 1 ? firstLabel : `${firstLabel} – ${lastLabel}`;
     groups.push({ label, indices });
   }
   return groups;
@@ -157,7 +170,7 @@ function groupByN(data: DiveData, n: number): Group[] {
 function groupByPercentile(
   data: DiveData,
   criterion: RankCriterion,
-  percentile: number
+  percentile: number,
 ): Group[] {
   const ranked = data.seriesNames.map((_, i) => ({
     index: i,
@@ -195,36 +208,27 @@ function groupByPercentile(
   return groups;
 }
 
-function groupByDiscipline(
-  data: DiveData,
-  tags: Tag[]
-): Group[] {
-  const disciplineTags = tags.filter((t) => t.name.startsWith("Discipline:"));
+function groupByDiscipline(data: DiveData): Group[] {
   const buckets = new Map<string, number[]>();
   const bucketOrder: string[] = [];
-  const assigned = new Set<number>();
 
-  for (const tag of disciplineTags) {
-    const discipline = tag.name.replace(/^Discipline:\s*/, "");
+  for (let i = 0; i < data.seriesNames.length; i++) {
+    const discipline = data.disciplines[i];
+    if (!discipline) continue;
     if (!buckets.has(discipline)) {
       buckets.set(discipline, []);
       bucketOrder.push(discipline);
     }
-    for (const idx of tag.diveIndices) {
-      if (idx < data.seriesNames.length && !assigned.has(idx)) {
-        buckets.get(discipline)!.push(idx);
-        assigned.add(idx);
-      }
-    }
+    buckets.get(discipline)!.push(i);
   }
 
   const untagged: number[] = [];
   for (let i = 0; i < data.seriesNames.length; i++) {
-    if (!assigned.has(i)) untagged.push(i);
+    if (!data.disciplines[i]) untagged.push(i);
   }
   if (untagged.length > 0) {
-    bucketOrder.push("Untagged");
-    buckets.set("Untagged", untagged);
+    bucketOrder.push("(Unknown)");
+    buckets.set("(Unknown)", untagged);
   }
 
   return bucketOrder
@@ -239,7 +243,7 @@ function groupByDiscipline(
 
 function coalesceAverage(
   seriesData: [number, number][][],
-  indices: number[]
+  indices: number[],
 ): [number, number][] {
   if (indices.length === 0) return [];
   if (indices.length === 1) return seriesData[indices[0]];
@@ -269,7 +273,7 @@ function coalesceAverage(
 
 function coalesceLongest(
   seriesData: [number, number][][],
-  indices: number[]
+  indices: number[],
 ): { pickedIndex: number; data: [number, number][] } {
   let best = indices[0];
   let bestDur = getDuration(seriesData[indices[0]]);
@@ -285,7 +289,7 @@ function coalesceLongest(
 
 function coalesceDeepest(
   seriesData: [number, number][][],
-  indices: number[]
+  indices: number[],
 ): { pickedIndex: number; data: [number, number][] } {
   let best = indices[0];
   let bestDepth = getMaxDepth(seriesData[indices[0]]);
@@ -311,7 +315,6 @@ function ensureTrailingZero(points: [number, number][]): [number, number][] {
 export function processData(
   data: DiveData,
   config: GroupingConfig,
-  tags: Tag[] = []
 ): ProcessedData {
   if (config.groupMode === "none") {
     return {
@@ -334,11 +337,11 @@ export function processData(
       groups = groupByPercentile(
         data,
         config.percentileCriterion,
-        config.percentileValue
+        config.percentileValue,
       );
       break;
     case "discipline":
-      groups = groupByDiscipline(data, tags);
+      groups = groupByDiscipline(data);
       break;
     default:
       groups = groupByNone(data);

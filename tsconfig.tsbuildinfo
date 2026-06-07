@@ -1,0 +1,1 @@
+{"root":["./src/addtagdialog.tsx","./src/app.tsx","./src/chart2d.tsx","./src/chart3d.tsx","./src/disciplinedialog.tsx","./src/groupingcontrols.tsx","./src/sidebar.tsx","./src/tagdialog.tsx","./src/colors.ts","./src/disciplines.ts","./src/grouping.ts","./src/main.tsx","./src/parsedata.ts","./src/storage.ts","./vite-env.d.ts"],"version":"6.0.3"}

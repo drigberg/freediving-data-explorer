@@ -1,13 +1,27 @@
 import Papa from "papaparse";
-import csvRaw from "../dive_profiles.csv?raw";
 
 export interface DiveData {
   seriesNames: string[];
   seriesData: [number, number][][];
+  disciplines: (string | undefined)[];
 }
 
-export function parseDiveData(): DiveData {
-  const result = Papa.parse<Record<string, string | number | null>>(csvRaw, {
+const TIME_STEP = 2;
+
+export function extractDateKey(seriesName: string): string | null {
+  const match = seriesName.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : null;
+}
+
+function ensureTrailingZero(points: [number, number][]): [number, number][] {
+  if (points.length > 0 && points[points.length - 1][1] !== 0) {
+    return [...points, [points[points.length - 1][0] + TIME_STEP, 0]];
+  }
+  return points;
+}
+
+export function parseCsvString(csv: string): DiveData {
+  const result = Papa.parse<Record<string, string | number | null>>(csv, {
     header: true,
     dynamicTyping: true,
     skipEmptyLines: true,
@@ -31,12 +45,9 @@ export function parseDiveData(): DiveData {
     }
   }
 
-  const timeStep = 2;
-  for (const points of seriesData) {
-    if (points.length > 0 && points[points.length - 1][1] !== 0) {
-      points.push([points[points.length - 1][0] + timeStep, 0]);
-    }
-  }
-
-  return { seriesNames, seriesData };
+  return {
+    seriesNames,
+    seriesData: seriesData.map(ensureTrailingZero),
+    disciplines: seriesNames.map(() => undefined),
+  };
 }

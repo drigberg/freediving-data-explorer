@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
-import { parseDiveData } from "./parseData";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DiveData } from "./parseData";
 import {
   defaultGroupingConfig,
@@ -7,6 +6,16 @@ import {
   type GroupingConfig,
   type Tag,
 } from "./grouping";
+import {
+  diveDataFromStore,
+  loadStore,
+  mergeCsvIntoStore,
+  saveStore,
+  setDiveDisciplines,
+  tagsFromStored,
+  tagsToStored,
+  type DiveStore,
+} from "./storage";
 import GroupingControls from "./GroupingControls";
 import Sidebar from "./Sidebar";
 import Chart2D from "./Chart2D";
@@ -15,12 +24,27 @@ import Chart3D from "./Chart3D";
 type ViewMode = "2d" | "3d";
 
 export default function App() {
-  const data = useMemo(() => parseDiveData(), []);
+  const [store, setStore] = useState<DiveStore | null>(null);
   const [mode, setMode] = useState<ViewMode>("2d");
   const [hiddenDives, setHiddenDives] = useState<Set<number>>(new Set());
   const [tags, setTags] = useState<Tag[]>([]);
-  const [groupingConfig, setGroupingConfig] = useState<GroupingConfig>(() =>
-    defaultGroupingConfig(data.seriesNames.length)
+  const [groupingConfig, setGroupingConfig] = useState<GroupingConfig | null>(
+    null
+  );
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    loadStore().then((loaded) => {
+      setStore(loaded);
+      setTags(tagsFromStored(loaded.tags, loaded.dives));
+      setGroupingConfig(defaultGroupingConfig(loaded.dives.length));
+    });
+  }, []);
+
+  const data = useMemo<DiveData | null>(
+    () => (store ? diveDataFromStore(store) : null),
+    [store]
   );
 
   const toggleVisibility = useCallback((index: number) => {
@@ -35,53 +59,132 @@ export default function App() {
     });
   }, []);
 
-  const { filteredData, filteredTags } = useMemo(() => {
+  const handleTagsChange = useCallback((newTags: Tag[]) => {
+    setTags(newTags);
+    setStore((prev) => {
+      if (!prev) return prev;
+      const updated: DiveStore = {
+        ...prev,
+        tags: tagsToStored(newTags, prev.dives),
+      };
+      saveStore(updated);
+      return updated;
+    });
+  }, []);
+
+  const handleDisciplinesAssign = useCallback(
+    (indices: number[], discipline: string) => {
+      setStore((prev) => {
+        if (!prev) return prev;
+        const updated = setDiveDisciplines(prev, indices, discipline);
+        saveStore(updated);
+        return updated;
+      });
+    },
+    []
+  );
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const text = await file.text();
+      setStore((prev) => {
+        if (!prev) return prev;
+        const { store: merged, added } = mergeCsvIntoStore(prev, text);
+        saveStore(merged);
+        setTags(tagsFromStored(merged.tags, merged.dives));
+        setImportMessage(
+          added > 0
+            ? `Imported ${added} new dive${added === 1 ? "" : "s"}`
+            : "No new dives found in file"
+        );
+        setTimeout(() => setImportMessage(null), 4000);
+        return merged;
+      });
+
+      e.target.value = "";
+    },
+    []
+  );
+
+  const { filteredData } = useMemo(() => {
+    if (!data) {
+      return {
+        filteredData: {
+          seriesNames: [],
+          seriesData: [],
+          disciplines: [],
+        } as DiveData,
+      };
+    }
+
     const seriesNames: string[] = [];
     const seriesData: [number, number][][] = [];
+    const disciplines: (string | undefined)[] = [];
     const originalToFiltered = new Map<number, number>();
     for (let i = 0; i < data.seriesNames.length; i++) {
       if (!hiddenDives.has(i)) {
         originalToFiltered.set(i, seriesNames.length);
         seriesNames.push(data.seriesNames[i]);
         seriesData.push(data.seriesData[i]);
+        disciplines.push(data.disciplines[i]);
       }
     }
-    const remappedTags: Tag[] = tags.map((t) => {
-      const newIndices = new Set<number>();
-      for (const idx of t.diveIndices) {
-        const mapped = originalToFiltered.get(idx);
-        if (mapped !== undefined) newIndices.add(mapped);
-      }
-      return { name: t.name, diveIndices: newIndices };
-    });
     return {
-      filteredData: { seriesNames, seriesData } as DiveData,
-      filteredTags: remappedTags,
+      filteredData: { seriesNames, seriesData, disciplines } as DiveData,
     };
-  }, [data, hiddenDives, tags]);
+  }, [data, hiddenDives]);
 
   const processed = useMemo(
-    () => processData(filteredData, groupingConfig, filteredTags),
-    [filteredData, groupingConfig, filteredTags]
+    () =>
+      groupingConfig
+        ? processData(filteredData, groupingConfig)
+        : { series: [] },
+    [filteredData, groupingConfig]
   );
+
+  if (!store || !data || !groupingConfig) {
+    return <div className="app-loading">Loading dives…</div>;
+  }
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>Freediving Dive Profiles</h1>
-        <div className="mode-toggle">
-          <button
-            className={mode === "2d" ? "active" : ""}
-            onClick={() => setMode("2d")}
-          >
-            2D
+        <div className="header-actions">
+          {importMessage && (
+            <span className="import-message">{importMessage}</span>
+          )}
+          <button className="import-btn" onClick={handleImportClick}>
+            Import dives
           </button>
-          <button
-            className={mode === "3d" ? "active" : ""}
-            onClick={() => setMode("3d")}
-          >
-            3D
-          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            hidden
+            onChange={handleFileSelected}
+          />
+          <div className="mode-toggle">
+            <button
+              className={mode === "2d" ? "active" : ""}
+              onClick={() => setMode("2d")}
+            >
+              2D
+            </button>
+            <button
+              className={mode === "3d" ? "active" : ""}
+              onClick={() => setMode("3d")}
+            >
+              3D
+            </button>
+          </div>
         </div>
       </header>
       <GroupingControls
@@ -93,10 +196,12 @@ export default function App() {
         <Sidebar
           seriesNames={data.seriesNames}
           seriesData={data.seriesData}
+          disciplines={data.disciplines}
           hiddenDives={hiddenDives}
           onToggleVisibility={toggleVisibility}
           tags={tags}
-          onTagsChange={setTags}
+          onTagsChange={handleTagsChange}
+          onDisciplinesAssign={handleDisciplinesAssign}
         />
         <main className="app-main">
           {mode === "2d" ? (
