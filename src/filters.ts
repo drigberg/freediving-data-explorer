@@ -1,3 +1,4 @@
+import { sortDisciplinesForFilter } from "./disciplines";
 import type { DiveData } from "./parseData";
 import { extractDateKey, formatExposureSuit } from "./parseData";
 
@@ -5,7 +6,6 @@ export interface DiveFilterConfig {
   disciplines: string[];
   weights: number[];
   exposureSuits: string[];
-  safeties: boolean[];
   dateFrom: string | null;
   dateTo: string | null;
 }
@@ -14,17 +14,8 @@ export interface DiveFilterOptions {
   disciplines: string[];
   weights: number[];
   exposureSuits: string[];
-  safeties: boolean[];
   dateMin: string;
   dateMax: string;
-}
-
-function isSafetyDiveYes(safety: boolean | undefined): boolean {
-  return safety === true;
-}
-
-function isSafetyDiveNo(safety: boolean | undefined): boolean {
-  return !isSafetyDiveYes(safety);
 }
 
 export function defaultDiveFilters(): DiveFilterConfig {
@@ -32,7 +23,6 @@ export function defaultDiveFilters(): DiveFilterConfig {
     disciplines: [],
     weights: [],
     exposureSuits: [],
-    safeties: [],
     dateFrom: null,
     dateTo: null,
   };
@@ -42,8 +32,6 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
   const disciplineSet = new Set<string>();
   const weightSet = new Set<number>();
   const exposureSuitSet = new Set<string>();
-  let hasSafetyYes = false;
-  let hasSafetyNo = false;
   let dateMin = "";
   let dateMax = "";
 
@@ -57,10 +45,6 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
     const suit = data.exposureSuits[i];
     if (suit) exposureSuitSet.add(formatExposureSuit(suit));
 
-    const safety = data.safeties[i];
-    if (isSafetyDiveYes(safety)) hasSafetyYes = true;
-    if (isSafetyDiveNo(safety)) hasSafetyNo = true;
-
     const date = extractDateKey(data.seriesNames[i]);
     if (date) {
       if (!dateMin || date < dateMin) dateMin = date;
@@ -69,13 +53,9 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
   }
 
   return {
-    disciplines: [...disciplineSet],
+    disciplines: sortDisciplinesForFilter([...disciplineSet]),
     weights: [...weightSet].sort((a, b) => a - b),
     exposureSuits: [...exposureSuitSet].sort(),
-    safeties: [
-      ...(hasSafetyYes ? [true] : []),
-      ...(hasSafetyNo ? [false] : []),
-    ],
     dateMin,
     dateMax,
   };
@@ -86,7 +66,6 @@ export function hasActiveFilters(filters: DiveFilterConfig): boolean {
     filters.disciplines.length > 0 ||
     filters.weights.length > 0 ||
     filters.exposureSuits.length > 0 ||
-    filters.safeties.length > 0 ||
     filters.dateFrom !== null ||
     filters.dateTo !== null
   );
@@ -95,7 +74,7 @@ export function hasActiveFilters(filters: DiveFilterConfig): boolean {
 export function divePassesFilters(
   data: DiveData,
   index: number,
-  filters: DiveFilterConfig
+  filters: DiveFilterConfig,
 ): boolean {
   if (filters.disciplines.length > 0) {
     const discipline = data.disciplines[index];
@@ -118,14 +97,6 @@ export function divePassesFilters(
     }
   }
 
-  if (filters.safeties.length > 0) {
-    const safety = data.safeties[index];
-    const matches =
-      (filters.safeties.includes(true) && isSafetyDiveYes(safety)) ||
-      (filters.safeties.includes(false) && isSafetyDiveNo(safety));
-    if (!matches) return false;
-  }
-
   const date = extractDateKey(data.seriesNames[index]);
   if (filters.dateFrom) {
     if (!date || date < filters.dateFrom) return false;
@@ -143,7 +114,6 @@ export function sliceDiveData(data: DiveData, indices: number[]): DiveData {
     seriesData: indices.map((i) => data.seriesData[i]),
     disciplines: indices.map((i) => data.disciplines[i]),
     weights: indices.map((i) => data.weights[i]),
-    safeties: indices.map((i) => data.safeties[i]),
     exposureSuits: indices.map((i) => data.exposureSuits[i]),
   };
 }
@@ -151,7 +121,7 @@ export function sliceDiveData(data: DiveData, indices: number[]): DiveData {
 export function visibleDiveIndices(
   data: DiveData,
   hiddenDives: Set<number>,
-  filters: DiveFilterConfig
+  filters: DiveFilterConfig,
 ): number[] {
   const indices: number[] = [];
   for (let i = 0; i < data.seriesNames.length; i++) {

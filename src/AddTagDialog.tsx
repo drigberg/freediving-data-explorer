@@ -1,7 +1,6 @@
 interface EditDialogProps {
   onAssignDiscipline: () => void;
   onAssignWeight: () => void;
-  onAssignSafety: () => void;
   onAssignExposureSuit: () => void;
   onOther: () => void;
   onClose: () => void;
@@ -10,7 +9,6 @@ interface EditDialogProps {
 export default function EditDialog({
   onAssignDiscipline,
   onAssignWeight,
-  onAssignSafety,
   onAssignExposureSuit,
   onOther,
   onClose,
@@ -25,9 +23,6 @@ export default function EditDialog({
           </li>
           <li>
             <button onClick={onAssignWeight}>Weight</button>
-          </li>
-          <li>
-            <button onClick={onAssignSafety}>Safety</button>
           </li>
           <li>
             <button onClick={onAssignExposureSuit}>Exposure Suit</button>

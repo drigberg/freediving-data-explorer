@@ -15,7 +15,6 @@ export interface DiveData {
   seriesData: [number, number][][];
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
-  safeties: (boolean | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
 }
 
@@ -63,7 +62,6 @@ export function parseCsvString(csv: string): DiveData {
     seriesData: seriesData.map(ensureTrailingZero),
     disciplines: seriesNames.map(() => undefined),
     weights: seriesNames.map(() => undefined),
-    safeties: seriesNames.map(() => undefined),
     exposureSuits: seriesNames.map(() => undefined),
   };
 }

@@ -13,7 +13,6 @@ import {
   saveStore,
   setDiveDisciplines,
   setDiveExposureSuits,
-  setDiveSafeties,
   setDiveWeights,
   tagsFromStored,
   tagsToStored,
@@ -105,18 +104,6 @@ export default function App() {
     [],
   );
 
-  const handleSafetyAssign = useCallback(
-    (indices: number[], safety: boolean) => {
-      setStore((prev) => {
-        if (!prev) return prev;
-        const updated = setDiveSafeties(prev, indices, safety);
-        saveStore(updated);
-        return updated;
-      });
-    },
-    [],
-  );
-
   const handleExposureSuitAssign = useCallback(
     (indices: number[], exposureSuit: ExposureSuit) => {
       setStore((prev) => {
@@ -175,7 +162,6 @@ export default function App() {
         seriesData: [],
         disciplines: [],
         weights: [],
-        safeties: [],
         exposureSuits: [],
       };
     }
@@ -214,10 +200,7 @@ export default function App() {
           />
         </div>
       </header>
-      <GroupingControls
-        config={groupingConfig}
-        onChange={setGroupingConfig}
-      />
+      <GroupingControls config={groupingConfig} onChange={setGroupingConfig} />
       {filterOptions && (
         <FilterControls
           filters={diveFilters}
@@ -233,7 +216,6 @@ export default function App() {
           seriesData={data.seriesData}
           disciplines={data.disciplines}
           weights={data.weights}
-          safeties={data.safeties}
           exposureSuits={data.exposureSuits}
           hiddenDives={hiddenDives}
           onToggleVisibility={toggleVisibility}
@@ -241,7 +223,6 @@ export default function App() {
           onTagsChange={handleTagsChange}
           onDisciplinesAssign={handleDisciplinesAssign}
           onWeightAssign={handleWeightAssign}
-          onSafetyAssign={handleSafetyAssign}
           onExposureSuitAssign={handleExposureSuitAssign}
           diveFilters={diveFilters}
         />

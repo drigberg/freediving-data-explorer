@@ -590,6 +590,25 @@ body,
   letter-spacing: 0.03em;
 }
 
+.dive-discipline.safety-dynb-discipline,
+.dive-detail-item.safety-dynb-discipline {
+  color: #e3b341;
+}
+
+.dive-discipline.safety-dynb-discipline {
+  background: rgba(227, 179, 65, 0.15);
+}
+
+.discipline-options .tag-option.safety-dynb-option {
+  color: #e3b341;
+  border-color: rgba(227, 179, 65, 0.4);
+}
+
+.discipline-options .tag-option.safety-dynb-option:hover {
+  background: rgba(227, 179, 65, 0.12);
+  border-color: #e3b341;
+}
+
 /* ── Tag dialog ── */
 
 .tag-dialog-overlay {

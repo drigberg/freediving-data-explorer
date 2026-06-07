@@ -1,4 +1,4 @@
-import { DISCIPLINES } from "./disciplines";
+import { DISCIPLINES, isSafetyDynbDiscipline } from "./disciplines";
 
 interface DisciplineDialogProps {
   onSelect: (discipline: string) => void;
@@ -23,7 +23,7 @@ export default function DisciplineDialog({
             {DISCIPLINES.map((d) => (
               <button
                 key={d}
-                className="tag-option"
+                className={`tag-option${isSafetyDynbDiscipline(d) ? " safety-dynb-option" : ""}`}
                 onClick={() => onSelect(d)}
               >
                 {d}

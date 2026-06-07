@@ -1,3 +1,4 @@
+import { SAFETY_DYNB_DISCIPLINE } from "./disciplines";
 import type { DiveData, ExposureSuit } from "./parseData";
 import { extractDateKey, parseCsvString } from "./parseData";
 import type { Tag } from "./grouping";
@@ -8,7 +9,6 @@ export interface StoredDive {
   profile: [number, number][];
   discipline?: string;
   weightKg?: number;
-  safety?: boolean;
   exposureSuit?: ExposureSuit;
 }
 
@@ -37,7 +37,7 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
     "Exposure Suit:",
   ];
   const legacyTags = store.tags.filter((t) =>
-    legacyPrefixes.some((p) => t.name.startsWith(p))
+    legacyPrefixes.some((p) => t.name.startsWith(p)),
   );
   if (legacyTags.length === 0) return store;
 
@@ -55,22 +55,25 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
           ...dive,
           discipline: tag.name.replace(/^Discipline:\s*/, ""),
         };
-      } else if (tag.name.startsWith("Weight:") && dive.weightKg === undefined) {
+      } else if (
+        tag.name.startsWith("Weight:") &&
+        dive.weightKg === undefined
+      ) {
         const match = tag.name.match(/^Weight:\s*([\d.]+)kg$/);
         if (match) {
           dives[idx] = { ...dive, weightKg: parseFloat(match[1]) };
         }
-      } else if (tag.name.startsWith("Safety:") && dive.safety === undefined) {
+      } else if (tag.name.startsWith("Safety:") && !dive.discipline) {
         const value = tag.name.replace(/^Safety:\s*/, "");
-        if (value === "Yes" || value === "No") {
-          dives[idx] = { ...dive, safety: value === "Yes" };
+        if (value === "Yes") {
+          dives[idx] = { ...dive, discipline: SAFETY_DYNB_DISCIPLINE };
         }
       } else if (
         tag.name.startsWith("Exposure Suit:") &&
         dive.exposureSuit === undefined
       ) {
         const match = tag.name.match(
-          /^Exposure Suit:\s*(Open Cell|Closed Cell),\s*([\d.]+)mm$/
+          /^Exposure Suit:\s*(Open Cell|Closed Cell),\s*([\d.]+)mm$/,
         );
         if (match) {
           dives[idx] = {
@@ -88,9 +91,26 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
   return {
     dives,
     tags: store.tags.filter(
-      (t) => !legacyPrefixes.some((p) => t.name.startsWith(p))
+      (t) => !legacyPrefixes.some((p) => t.name.startsWith(p)),
     ),
   };
+}
+
+function migrateSafetyProperty(store: DiveStore): DiveStore {
+  let changed = false;
+  const dives = store.dives.map((d) => {
+    const safety = (d as StoredDive & { safety?: boolean }).safety;
+    if (safety === undefined) return d;
+    changed = true;
+    const { safety: _removed, ...rest } = d as StoredDive & {
+      safety?: boolean;
+    };
+    if (safety) {
+      return { ...rest, discipline: SAFETY_DYNB_DISCIPLINE };
+    }
+    return rest;
+  });
+  return changed ? { ...store, dives } : store;
 }
 
 export function diveDataFromStore(store: DiveStore): DiveData {
@@ -100,15 +120,11 @@ export function diveDataFromStore(store: DiveStore): DiveData {
     seriesData: sorted.map((d) => d.profile),
     disciplines: sorted.map((d) => d.discipline),
     weights: sorted.map((d) => d.weightKg),
-    safeties: sorted.map((d) => d.safety),
     exposureSuits: sorted.map((d) => d.exposureSuit),
   };
 }
 
-export function storeFromDiveData(
-  data: DiveData,
-  tags: Tag[] = []
-): DiveStore {
+export function storeFromDiveData(data: DiveData, tags: Tag[] = []): DiveStore {
   const dives: StoredDive[] = data.seriesNames.map((label, i) => ({
     date: extractDateKey(label) ?? label,
     label,
@@ -123,7 +139,7 @@ export function storeFromDiveData(
 
 export function tagsFromStored(
   stored: StoredTag[],
-  dives: StoredDive[]
+  dives: StoredDive[],
 ): Tag[] {
   const dateToIndex = new Map(dives.map((d, i) => [d.date, i]));
   return stored.map((t) => ({
@@ -131,7 +147,7 @@ export function tagsFromStored(
     diveIndices: new Set(
       t.diveDates
         .map((date) => dateToIndex.get(date))
-        .filter((i): i is number => i !== undefined)
+        .filter((i): i is number => i !== undefined),
     ),
   }));
 }
@@ -149,7 +165,7 @@ export function tagsToStored(tags: Tag[], dives: StoredDive[]): StoredTag[] {
 
 export function mergeCsvIntoStore(
   store: DiveStore,
-  csv: string
+  csv: string,
 ): { store: DiveStore; added: number } {
   const imported = parseCsvString(csv);
   const existingDates = new Set(store.dives.map((d) => d.date));
@@ -168,7 +184,7 @@ export function mergeCsvIntoStore(
   }
 
   const dives = [...store.dives, ...newDives].sort((a, b) =>
-    a.date.localeCompare(b.date)
+    a.date.localeCompare(b.date),
   );
 
   return {
@@ -209,10 +225,10 @@ export async function loadStore(): Promise<DiveStore> {
 
   const hadLegacyTags = store.tags.some((t) =>
     ["Discipline:", "Weight:", "Safety:", "Exposure Suit:"].some((p) =>
-      t.name.startsWith(p)
-    )
+      t.name.startsWith(p),
+    ),
   );
-  const migrated = migrateLegacyTags(store);
+  const migrated = migrateSafetyProperty(migrateLegacyTags(store));
   writeToLocalStorage(migrated);
 
   if (hadLegacyTags) {
@@ -232,20 +248,20 @@ export async function loadStore(): Promise<DiveStore> {
 
 function datesFromIndices(
   store: DiveStore,
-  diveIndices: number[]
+  diveIndices: number[],
 ): Set<string> {
   const data = diveDataFromStore(store);
   return new Set(
     diveIndices
       .map((i) => extractDateKey(data.seriesNames[i]))
-      .filter((d): d is string => d !== null)
+      .filter((d): d is string => d !== null),
   );
 }
 
 export function setDiveDisciplines(
   store: DiveStore,
   diveIndices: number[],
-  discipline: string
+  discipline: string,
 ): DiveStore {
   const datesToUpdate = datesFromIndices(store, diveIndices);
   if (datesToUpdate.size === 0) return store;
@@ -253,7 +269,7 @@ export function setDiveDisciplines(
   return {
     ...store,
     dives: store.dives.map((d) =>
-      datesToUpdate.has(d.date) ? { ...d, discipline } : d
+      datesToUpdate.has(d.date) ? { ...d, discipline } : d,
     ),
   };
 }
@@ -261,7 +277,7 @@ export function setDiveDisciplines(
 export function setDiveWeights(
   store: DiveStore,
   diveIndices: number[],
-  weightKg: number
+  weightKg: number,
 ): DiveStore {
   const datesToUpdate = datesFromIndices(store, diveIndices);
   if (datesToUpdate.size === 0) return store;
@@ -269,23 +285,7 @@ export function setDiveWeights(
   return {
     ...store,
     dives: store.dives.map((d) =>
-      datesToUpdate.has(d.date) ? { ...d, weightKg } : d
-    ),
-  };
-}
-
-export function setDiveSafeties(
-  store: DiveStore,
-  diveIndices: number[],
-  safety: boolean
-): DiveStore {
-  const datesToUpdate = datesFromIndices(store, diveIndices);
-  if (datesToUpdate.size === 0) return store;
-
-  return {
-    ...store,
-    dives: store.dives.map((d) =>
-      datesToUpdate.has(d.date) ? { ...d, safety } : d
+      datesToUpdate.has(d.date) ? { ...d, weightKg } : d,
     ),
   };
 }
@@ -293,7 +293,7 @@ export function setDiveSafeties(
 export function setDiveExposureSuits(
   store: DiveStore,
   diveIndices: number[],
-  exposureSuit: ExposureSuit
+  exposureSuit: ExposureSuit,
 ): DiveStore {
   const datesToUpdate = datesFromIndices(store, diveIndices);
   if (datesToUpdate.size === 0) return store;
@@ -301,7 +301,7 @@ export function setDiveExposureSuits(
   return {
     ...store,
     dives: store.dives.map((d) =>
-      datesToUpdate.has(d.date) ? { ...d, exposureSuit } : d
+      datesToUpdate.has(d.date) ? { ...d, exposureSuit } : d,
     ),
   };
 }

@@ -502,7 +502,7 @@
           0
         ]
       ],
-      "discipline": "Free Immersion",
+      "discipline": "Safety (DYNB)",
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 7
@@ -704,7 +704,7 @@
           0
         ]
       ],
-      "discipline": "Free Immersion",
+      "discipline": "Safety (DYNB)",
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 7
@@ -819,8 +819,7 @@
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 7
-      },
-      "safety": true
+      }
     },
     {
       "date": "2026-03-27",
@@ -1158,8 +1157,7 @@
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 7
-      },
-      "safety": true
+      }
     },
     {
       "date": "2026-04-08",
@@ -1318,7 +1316,7 @@
           0
         ]
       ],
-      "discipline": "Free Immersion",
+      "discipline": "Bi-Fins",
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 7
@@ -1469,12 +1467,11 @@
           0
         ]
       ],
-      "discipline": "No-Fins",
+      "discipline": "Bi-Fins",
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 5
-      },
-      "safety": true
+      }
     },
     {
       "date": "2026-05-25",
@@ -1617,7 +1614,7 @@
           0
         ]
       ],
-      "discipline": "Bi-Fins",
+      "discipline": "Safety (DYNB)",
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 5
@@ -1804,8 +1801,7 @@
       "exposureSuit": {
         "openCell": true,
         "thicknessMm": 5
-      },
-      "safety": true
+      }
     }
   ],
   "tags": []

@@ -3,10 +3,9 @@ import { shortDateLabel } from "./colors";
 import TagDialog from "./TagDialog";
 import DisciplineDialog from "./DisciplineDialog";
 import WeightDialog from "./WeightDialog";
-import SafetyDialog from "./SafetyDialog";
 import ExposureSuitDialog from "./ExposureSuitDialog";
 import EditDialog from "./AddTagDialog";
-import { disciplineAbbrev } from "./disciplines";
+import { disciplineAbbrev, isSafetyDynbDiscipline } from "./disciplines";
 import type { ExposureSuit } from "./parseData";
 import { extractDateKey, formatExposureSuit } from "./parseData";
 import {
@@ -21,7 +20,6 @@ interface SidebarProps {
   seriesData: [number, number][][];
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
-  safeties: (boolean | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
   hiddenDives: Set<number>;
   onToggleVisibility: (index: number) => void;
@@ -29,7 +27,6 @@ interface SidebarProps {
   onTagsChange: (tags: Tag[]) => void;
   onDisciplinesAssign: (indices: number[], discipline: string) => void;
   onWeightAssign: (indices: number[], weightKg: number) => void;
-  onSafetyAssign: (indices: number[], safety: boolean) => void;
   onExposureSuitAssign: (indices: number[], suit: ExposureSuit) => void;
   diveFilters: DiveFilterConfig;
 }
@@ -38,7 +35,6 @@ type AssignMode =
   | { kind: "tag"; name: string }
   | { kind: "discipline"; value: string }
   | { kind: "weight"; value: number }
-  | { kind: "safety"; value: boolean }
   | { kind: "exposureSuit"; value: ExposureSuit };
 
 function assignModeDescription(mode: AssignMode): {
@@ -52,8 +48,6 @@ function assignModeDescription(mode: AssignMode): {
       return { action: "assign discipline", label: mode.value };
     case "weight":
       return { action: "assign weight", label: `${mode.value}kg` };
-    case "safety":
-      return { action: "assign safety", label: mode.value ? "Yes" : "No" };
     case "exposureSuit":
       return {
         action: "assign exposure suit",
@@ -149,7 +143,6 @@ export default function Sidebar({
   seriesData,
   disciplines,
   weights,
-  safeties,
   exposureSuits,
   hiddenDives,
   onToggleVisibility,
@@ -157,7 +150,6 @@ export default function Sidebar({
   onTagsChange,
   onDisciplinesAssign,
   onWeightAssign,
-  onSafetyAssign,
   onExposureSuitAssign,
   diveFilters,
 }: SidebarProps) {
@@ -165,7 +157,6 @@ export default function Sidebar({
   const [showTagDialog, setShowTagDialog] = useState(false);
   const [showDisciplineDialog, setShowDisciplineDialog] = useState(false);
   const [showWeightDialog, setShowWeightDialog] = useState(false);
-  const [showSafetyDialog, setShowSafetyDialog] = useState(false);
   const [showExposureSuitDialog, setShowExposureSuitDialog] = useState(false);
   const [expandedDives, setExpandedDives] = useState<Set<number>>(new Set());
 
@@ -238,9 +229,6 @@ export default function Sidebar({
       case "weight":
         onWeightAssign(indices, assignMode.value);
         break;
-      case "safety":
-        onSafetyAssign(indices, assignMode.value);
-        break;
       case "exposureSuit":
         onExposureSuitAssign(indices, assignMode.value);
         break;
@@ -256,7 +244,6 @@ export default function Sidebar({
     onTagsChange,
     onDisciplinesAssign,
     onWeightAssign,
-    onSafetyAssign,
     onExposureSuitAssign,
   ]);
 
@@ -311,10 +298,9 @@ export default function Sidebar({
       seriesData,
       disciplines,
       weights,
-      safeties,
       exposureSuits,
     }),
-    [seriesNames, seriesData, disciplines, weights, safeties, exposureSuits],
+    [seriesNames, seriesData, disciplines, weights, exposureSuits],
   );
 
   const { includedGroups, excludedGroups } = useMemo(() => {
@@ -343,6 +329,9 @@ export default function Sidebar({
     const isHidden = hiddenDives.has(i);
     const isSelected = selection.has(i);
     const discipline = disciplines[i];
+    const disciplineClass = discipline
+      ? `dive-discipline${isSafetyDynbDiscipline(discipline) ? " safety-dynb-discipline" : ""}`
+      : "";
     const mutedClass = excluded ? " filter-excluded" : "";
 
     if (inSelectMode) {
@@ -355,7 +344,7 @@ export default function Sidebar({
           <span className="tag-checkbox">{isSelected ? "✓" : ""}</span>
           <span className="dive-name">{shortDateLabel(name)}</span>
           {discipline && (
-            <span className="dive-discipline">
+            <span className={disciplineClass}>
               {disciplineAbbrev(discipline)}
             </span>
           )}
@@ -371,7 +360,6 @@ export default function Sidebar({
     const duration =
       points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
     const weight = weights[i];
-    const safety = safeties[i];
     const exposureSuit = exposureSuits[i];
 
     return (
@@ -394,7 +382,7 @@ export default function Sidebar({
             {shortDateLabel(name)}
           </span>
           {discipline && (
-            <span className="dive-discipline">
+            <span className={disciplineClass}>
               {disciplineAbbrev(discipline)}
             </span>
           )}
@@ -411,15 +399,14 @@ export default function Sidebar({
               Duration: {formatDuration(duration)}
             </li>
             {discipline && (
-              <li className="dive-detail-item">Discipline: {discipline}</li>
+              <li
+                className={`dive-detail-item${isSafetyDynbDiscipline(discipline) ? " safety-dynb-discipline" : ""}`}
+              >
+                Discipline: {discipline}
+              </li>
             )}
             {weight !== undefined && (
               <li className="dive-detail-item">Weight: {weight}kg</li>
-            )}
-            {safety !== undefined && (
-              <li className="dive-detail-item">
-                Safety: {safety ? "Yes" : "No"}
-              </li>
             )}
             {exposureSuit && (
               <li className="dive-detail-item">
@@ -499,10 +486,6 @@ export default function Sidebar({
             setShowEditDialog(false);
             setShowWeightDialog(true);
           }}
-          onAssignSafety={() => {
-            setShowEditDialog(false);
-            setShowSafetyDialog(true);
-          }}
           onAssignExposureSuit={() => {
             setShowEditDialog(false);
             setShowExposureSuitDialog(true);
@@ -554,20 +537,6 @@ export default function Sidebar({
           onClose={() => setShowWeightDialog(false)}
           onBack={() => {
             setShowWeightDialog(false);
-            backToEdit();
-          }}
-        />
-      )}
-
-      {showSafetyDialog && (
-        <SafetyDialog
-          onSelect={(safety) => {
-            startAssignMode({ kind: "safety", value: safety });
-            setShowSafetyDialog(false);
-          }}
-          onClose={() => setShowSafetyDialog(false)}
-          onBack={() => {
-            setShowSafetyDialog(false);
             backToEdit();
           }}
         />

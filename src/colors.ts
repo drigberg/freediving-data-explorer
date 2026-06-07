@@ -1,8 +1,10 @@
 const HUE_START = 30; // orange
-const HUE_END = 180;  // cyan
+const HUE_END = 180; // cyan
 
 function seriesHue(index: number, total: number): number {
-  return total <= 1 ? HUE_END : HUE_START + (index / (total - 1)) * (HUE_END - HUE_START);
+  return total <= 1
+    ? HUE_END
+    : HUE_START + (index / (total - 1)) * (HUE_END - HUE_START);
 }
 
 export function getSeriesColor(index: number, total: number): string {
@@ -12,7 +14,7 @@ export function getSeriesColor(index: number, total: number): string {
 export function getSeriesColorRgba(
   index: number,
   total: number,
-  alpha: number
+  alpha: number,
 ): string {
   return `hsla(${seriesHue(index, total)}, 100%, 50%, ${alpha})`;
 }
@@ -24,7 +26,7 @@ export function getSeriesColorRgba(
 export function getSeriesOpacity(
   index: number,
   activeIndex: number,
-  total: number
+  total: number,
 ): number {
   if (total <= 1) return 1.0;
   const distance = Math.abs(index - activeIndex);
@@ -40,8 +42,18 @@ export function shortDateLabel(seriesName: string): string {
   const match = seriesName.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return seriesName;
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const monthIdx = parseInt(match[2], 10) - 1;
   const day = parseInt(match[3], 10);
