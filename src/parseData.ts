@@ -47,6 +47,57 @@ function ensureTrailingZero(points: ProfilePoint[]): ProfilePoint[] {
   return points;
 }
 
+/**
+ * When a profile starts at the surface, drop points before the last
+ * consecutive zero-depth reading at the beginning of the dive.
+ */
+export function trimLeadingSurfacePoints(
+  profile: ProfilePoint[],
+): ProfilePoint[] {
+  if (profile.length === 0 || profile[0][1] !== 0) return profile;
+
+  let lastZeroIndex = 0;
+  for (let i = 0; i < profile.length; i++) {
+    if (profile[i][1] === 0) {
+      lastZeroIndex = i;
+    } else {
+      break;
+    }
+  }
+
+  if (lastZeroIndex === 0) return profile;
+  return profile.slice(lastZeroIndex);
+}
+
+/**
+ * When a profile ends at the surface, drop points after the first
+ * consecutive zero-depth reading at the end of the dive.
+ */
+export function trimTrailingSurfacePoints(
+  profile: ProfilePoint[],
+): ProfilePoint[] {
+  if (profile.length === 0 || profile[profile.length - 1][1] !== 0) {
+    return profile;
+  }
+
+  let firstTrailingZeroIndex = profile.length - 1;
+  for (let i = profile.length - 1; i >= 0; i--) {
+    if (profile[i][1] === 0) {
+      firstTrailingZeroIndex = i;
+    } else {
+      break;
+    }
+  }
+
+  return profile.slice(0, firstTrailingZeroIndex + 1);
+}
+
+export function normalizeProfilePoints(profile: ProfilePoint[]): ProfilePoint[] {
+  return ensureTrailingZero(
+    trimTrailingSurfacePoints(trimLeadingSurfacePoints(profile)),
+  );
+}
+
 export interface ParsedUddfDive {
   datetime: string;
   diveNumber: number;
@@ -99,6 +150,6 @@ export function parseUddfString(xml: string): ParsedUddfDive | null {
   return {
     datetime,
     diveNumber,
-    profile: ensureTrailingZero(profile),
+    profile: normalizeProfilePoints(profile),
   };
 }

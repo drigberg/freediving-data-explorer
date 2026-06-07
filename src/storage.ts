@@ -1,6 +1,10 @@
 import { SAFETY_DYNB_DISCIPLINE } from "./disciplines";
 import type { DiveData, ExposureSuit, ProfilePoint } from "./parseData";
-import { parseUddfString, seriesNameFromDive } from "./parseData";
+import {
+  parseUddfString,
+  seriesNameFromDive,
+  normalizeProfilePoints,
+} from "./parseData";
 import type { Tag } from "./grouping";
 
 export interface StoredDive {
@@ -10,6 +14,7 @@ export interface StoredDive {
   discipline?: string;
   weightKg?: number;
   exposureSuit?: ExposureSuit;
+  archived?: boolean;
 }
 
 export interface StoredTag {
@@ -136,6 +141,36 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
   };
 }
 
+function profilePointsEqual(
+  a: ProfilePoint[],
+  b: ProfilePoint[],
+): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (p, i) =>
+      p[0] === b[i][0] &&
+      p[1] === b[i][1] &&
+      (p[2] ?? undefined) === (b[i][2] ?? undefined),
+  );
+}
+
+function normalizeDiveProfiles(store: DiveStore): {
+  store: DiveStore;
+  changed: boolean;
+} {
+  let changed = false;
+  const dives = store.dives.map((d) => {
+    const normalized = normalizeProfilePoints(d.profile);
+    if (profilePointsEqual(d.profile, normalized)) return d;
+    changed = true;
+    return { ...d, profile: normalized };
+  });
+  return {
+    store: changed ? { ...store, dives } : store,
+    changed,
+  };
+}
+
 /** Migrates the old `safety: boolean` field to discipline "Safety (DYNB)". */
 function migrateSafetyProperty(store: DiveStore): DiveStore {
   let changed = false;
@@ -156,10 +191,14 @@ function migrateSafetyProperty(store: DiveStore): DiveStore {
 
 // ── Core store ↔ DiveData conversion ──
 
+export function activeDives(store: DiveStore): StoredDive[] {
+  return [...store.dives]
+    .filter((d) => !d.archived)
+    .sort((a, b) => a.datetime.localeCompare(b.datetime));
+}
+
 export function diveDataFromStore(store: DiveStore): DiveData {
-  const sorted = [...store.dives].sort((a, b) =>
-    a.datetime.localeCompare(b.datetime),
-  );
+  const sorted = activeDives(store);
   return {
     seriesNames: sorted.map((d) =>
       seriesNameFromDive(d.datetime, d.diveNumber),
@@ -259,6 +298,20 @@ export function setDiveExposureSuits(
   };
 }
 
+export function archiveDives(
+  store: DiveStore,
+  diveIndices: number[],
+): DiveStore {
+  const datetimesToUpdate = datetimesFromIndices(store, diveIndices);
+  if (datetimesToUpdate.size === 0) return store;
+  return {
+    ...store,
+    dives: store.dives.map((d) =>
+      datetimesToUpdate.has(d.datetime) ? { ...d, archived: true } : d,
+    ),
+  };
+}
+
 // ── Import ──
 
 export function mergeUddfIntoStore(
@@ -324,7 +377,7 @@ export async function loadStore(): Promise<DiveStore> {
     tags: (StoredTag & { diveDates?: string[] })[];
   };
   const s = store as AnyStore;
-  const needsMigration =
+  const needsLegacyMigration =
     s.dives.some((d) => "date" in d || "label" in d || "safety" in d) ||
     s.tags.some(
       (t) =>
@@ -334,13 +387,14 @@ export async function loadStore(): Promise<DiveStore> {
         ),
     );
 
-  const migrated = migrateSafetyProperty(
-    migrateLegacyTags(migrateToNewDiveFormat(store)),
+  const { store: trimmed, changed: profilesTrimmed } = normalizeDiveProfiles(
+    migrateSafetyProperty(migrateLegacyTags(migrateToNewDiveFormat(store))),
   );
+  const migrated = trimmed;
 
   writeToLocalStorage(migrated);
 
-  if (needsMigration) {
+  if (needsLegacyMigration || profilesTrimmed) {
     try {
       await fetch(API_URL, {
         method: "PUT",

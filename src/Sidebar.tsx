@@ -1,4 +1,11 @@
-import { Fragment, useState, useCallback, useRef, useMemo } from "react";
+import {
+  Fragment,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+  useEffect,
+} from "react";
 import { shortDateLabel } from "./colors";
 import TagDialog from "./TagDialog";
 import DisciplineDialog from "./DisciplineDialog";
@@ -23,12 +30,15 @@ interface SidebarProps {
   weights: (number | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
   hiddenDives: Set<number>;
+  activeDiveIndex: number | null;
+  onDiveActivate: (index: number) => void;
   onToggleVisibility: (index: number) => void;
   tags: Tag[];
   onTagsChange: (tags: Tag[]) => void;
   onDisciplinesAssign: (indices: number[], discipline: string) => void;
   onWeightAssign: (indices: number[], weightKg: number) => void;
   onExposureSuitAssign: (indices: number[], suit: ExposureSuit) => void;
+  onArchiveDive: (index: number) => void;
   diveFilters: DiveFilterConfig;
 }
 
@@ -167,12 +177,15 @@ export default function Sidebar({
   weights,
   exposureSuits,
   hiddenDives,
+  activeDiveIndex,
+  onDiveActivate,
   onToggleVisibility,
   tags,
   onTagsChange,
   onDisciplinesAssign,
   onWeightAssign,
   onExposureSuitAssign,
+  onArchiveDive,
   diveFilters,
 }: SidebarProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -182,6 +195,33 @@ export default function Sidebar({
   const [showExposureSuitDialog, setShowExposureSuitDialog] = useState(false);
   const [expandedDives, setExpandedDives] = useState<Set<number>>(new Set());
   const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
+  const diveListRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    if (activeDiveIndex == null) return;
+
+    const dateKey = extractDateKey(seriesNames[activeDiveIndex]);
+    if (dateKey) {
+      setCollapsedDates((prev) => {
+        if (!prev.has(dateKey)) return prev;
+        const next = new Set(prev);
+        next.delete(dateKey);
+        return next;
+      });
+    }
+
+    setExpandedDives((prev) => new Set(prev).add(activeDiveIndex));
+
+    const timeoutId = window.setTimeout(() => {
+      requestAnimationFrame(() => {
+        diveListRef.current
+          ?.querySelector(`[data-dive-index="${activeDiveIndex}"]`)
+          ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeDiveIndex, seriesNames]);
 
   const toggleDateCollapsed = useCallback((dateKey: string) => {
     setCollapsedDates((prev) => {
@@ -195,17 +235,23 @@ export default function Sidebar({
     });
   }, []);
 
-  const toggleExpanded = useCallback((index: number) => {
-    setExpandedDives((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
+  const toggleExpanded = useCallback(
+    (index: number) => {
+      if (!expandedDives.has(index)) {
+        onDiveActivate(index);
       }
-      return next;
-    });
-  }, []);
+      setExpandedDives((prev) => {
+        const next = new Set(prev);
+        if (next.has(index)) {
+          next.delete(index);
+        } else {
+          next.add(index);
+        }
+        return next;
+      });
+    },
+    [expandedDives, onDiveActivate],
+  );
 
   const [assignMode, setAssignMode] = useState<AssignMode | null>(null);
   const [selection, setSelection] = useState<Set<number>>(new Set());
@@ -380,6 +426,7 @@ export default function Sidebar({
       return (
         <li
           key={i}
+          data-dive-index={i}
           className={`sidebar-dive-item tagging${mutedClass} ${isSelected ? "selected" : ""}`}
           onClick={(e) => handleSelectionClick(i, e.shiftKey)}
         >
@@ -407,6 +454,7 @@ export default function Sidebar({
     return (
       <li
         key={i}
+        data-dive-index={i}
         className={`sidebar-dive-entry${mutedClass} ${isExpanded ? "expanded" : ""}`}
       >
         <div className={`sidebar-dive-item${mutedClass}`}>
@@ -472,6 +520,15 @@ export default function Sidebar({
                 {tagName}
               </li>
             ))}
+            <li className="dive-detail-actions">
+              <button
+                type="button"
+                className="dive-archive-btn"
+                onClick={() => onArchiveDive(i)}
+              >
+                Archive
+              </button>
+            </li>
           </ul>
         )}
       </li>
@@ -539,7 +596,7 @@ export default function Sidebar({
         </div>
       )}
 
-      <ul className="sidebar-dive-list">
+      <ul className="sidebar-dive-list" ref={diveListRef}>
         {renderYearGroups(includedGroups, false)}
         {!inSelectMode && excludedGroups.length > 0 && (
           <>

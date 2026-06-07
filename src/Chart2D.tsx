@@ -1,11 +1,17 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
-import type { ProcessedData } from "./grouping";
+import {
+  chartSeriesIndexForGlobalDive,
+  type ProcessedData,
+} from "./grouping";
 import { getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
 
 interface Chart2DProps {
   processed: ProcessedData;
+  visibleIndices: number[];
+  activeDiveIndex?: number | null;
+  onActiveDiveChange?: (globalDiveIndex: number) => void;
 }
 
 type SeriesEventParams = {
@@ -13,7 +19,14 @@ type SeriesEventParams = {
   seriesIndex?: number;
 };
 
-export default function Chart2D({ processed }: Chart2DProps) {
+const ACTIVE_LINE_COLOR = "#ffffff";
+
+export default function Chart2D({
+  processed,
+  visibleIndices,
+  activeDiveIndex,
+  onActiveDiveChange,
+}: Chart2DProps) {
   const { series } = processed;
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
@@ -22,13 +35,37 @@ export default function Chart2D({ processed }: Chart2DProps) {
     setActiveIndex(series.length - 1);
   }, [series.length]);
 
+  useEffect(() => {
+    if (activeDiveIndex == null) return;
+    const seriesIndex = chartSeriesIndexForGlobalDive(
+      series,
+      visibleIndices,
+      activeDiveIndex,
+    );
+    if (seriesIndex != null) setActiveIndex(seriesIndex);
+  }, [activeDiveIndex, series, visibleIndices]);
+
   const clampedActive = Math.min(activeIndex, series.length - 1);
 
-  const handleSeriesClick = useCallback((params: SeriesEventParams) => {
-    if (params.componentType === "series" && params.seriesIndex != null) {
-      setActiveIndex(params.seriesIndex);
-    }
-  }, []);
+  const notifyActiveDive = useCallback(
+    (seriesIndex: number) => {
+      const primary = series[seriesIndex]?.primaryDiveIndex;
+      if (primary == null || !onActiveDiveChange) return;
+      const globalIndex = visibleIndices[primary];
+      if (globalIndex != null) onActiveDiveChange(globalIndex);
+    },
+    [series, visibleIndices, onActiveDiveChange],
+  );
+
+  const handleSeriesClick = useCallback(
+    (params: SeriesEventParams) => {
+      if (params.componentType === "series" && params.seriesIndex != null) {
+        setActiveIndex(params.seriesIndex);
+        notifyActiveDive(params.seriesIndex);
+      }
+    },
+    [notifyActiveDive],
+  );
 
   const handleSeriesMouseOver = useCallback((params: SeriesEventParams) => {
     if (params.componentType === "series" && params.seriesIndex != null) {
@@ -58,7 +95,7 @@ export default function Chart2D({ processed }: Chart2DProps) {
       tooltip: {
         trigger: "axis",
         backgroundColor: "rgba(13, 17, 23, 0.9)",
-        borderColor: getSeriesColor(clampedActive, total),
+        borderColor: ACTIVE_LINE_COLOR,
         borderWidth: 1,
         textStyle: { color: "#e6edf3", fontSize: 12 },
       },
@@ -97,8 +134,8 @@ export default function Chart2D({ processed }: Chart2DProps) {
       },
       series: series.map((s, i) => {
         const opacity = getSeriesOpacity(i, clampedActive, total);
-        const color = getSeriesColor(i, total);
         const isActive = i === clampedActive;
+        const color = isActive ? ACTIVE_LINE_COLOR : getSeriesColor(i, total);
 
         return {
           name: s.label,
@@ -111,9 +148,11 @@ export default function Chart2D({ processed }: Chart2DProps) {
           lineStyle: {
             width: isActive ? 3 : 1.5,
             color,
-            opacity,
+            opacity: isActive ? 1 : opacity,
             shadowBlur: isActive ? 16 : 8,
-            shadowColor: getSeriesColorRgba(i, total, isActive ? 0.6 : 0.25),
+            shadowColor: isActive
+              ? "rgba(255, 255, 255, 0.6)"
+              : getSeriesColorRgba(i, total, 0.25),
           },
           ...(isActive && {
             areaStyle: {
@@ -124,11 +163,8 @@ export default function Chart2D({ processed }: Chart2DProps) {
                 x2: 0,
                 y2: 1,
                 colorStops: [
-                  {
-                    offset: 0,
-                    color: getSeriesColorRgba(i, total, 0.25),
-                  },
-                  { offset: 1, color: getSeriesColorRgba(i, total, 0) },
+                  { offset: 0, color: "rgba(255, 255, 255, 0.2)" },
+                  { offset: 1, color: "rgba(255, 255, 255, 0)" },
                 ],
               },
             },
@@ -178,6 +214,12 @@ export default function Chart2D({ processed }: Chart2DProps) {
           max={series.length - 1}
           value={clampedActive}
           onChange={(e) => setActiveIndex(Number(e.target.value))}
+          onMouseUp={(e) =>
+            notifyActiveDive(Number(e.currentTarget.value))
+          }
+          onTouchEnd={(e) =>
+            notifyActiveDive(Number(e.currentTarget.value))
+          }
           className="series-slider"
         />
         <div className="slider-endpoints">

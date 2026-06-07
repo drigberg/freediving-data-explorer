@@ -29,6 +29,10 @@ export interface Tag {
 export interface ProcessedSeries {
   label: string;
   data: [number, number][];
+  /** Index into the filtered DiveData for sidebar scroll/highlight. */
+  primaryDiveIndex: number;
+  /** Filtered DiveData indices represented by this series. */
+  diveIndices: number[];
 }
 
 export interface ProcessedData {
@@ -303,6 +307,8 @@ export function processData(
       series: data.seriesNames.map((name, i) => ({
         label: name,
         data: stripTemp(data.seriesData[i]),
+        primaryDiveIndex: i,
+        diveIndices: [i],
       })),
     };
   }
@@ -328,22 +334,43 @@ export function processData(
   const series: ProcessedSeries[] = groups.map((group) => {
     let seriesPoints: [number, number][];
     let label = group.label;
+    let primaryDiveIndex: number;
 
     if (config.displayMode === "average") {
       seriesPoints = coalesceAverage(data.seriesData, group.indices);
+      primaryDiveIndex = Math.max(...group.indices);
     } else {
       const result =
         config.maximumCriterion === "longest"
           ? coalesceLongest(data.seriesData, group.indices)
           : coalesceDeepest(data.seriesData, group.indices);
       seriesPoints = result.data;
+      primaryDiveIndex = result.pickedIndex;
       const pickedName = data.seriesNames[result.pickedIndex];
       const dateMatch = pickedName.match(/^[\d-]+/)?.[0] ?? "";
       label = `${group.label} [${dateMatch}]`;
     }
 
-    return { label, data: ensureTrailingZero(seriesPoints) };
+    return {
+      label,
+      data: ensureTrailingZero(seriesPoints),
+      primaryDiveIndex,
+      diveIndices: group.indices,
+    };
   });
 
   return { series };
+}
+
+export function chartSeriesIndexForGlobalDive(
+  series: ProcessedSeries[],
+  visibleIndices: number[],
+  globalDiveIndex: number,
+): number | null {
+  const filteredIndex = visibleIndices.indexOf(globalDiveIndex);
+  if (filteredIndex === -1) return null;
+  const seriesIndex = series.findIndex((s) =>
+    s.diveIndices.includes(filteredIndex),
+  );
+  return seriesIndex >= 0 ? seriesIndex : null;
 }

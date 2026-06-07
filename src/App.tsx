@@ -7,6 +7,8 @@ import {
   type Tag,
 } from "./grouping";
 import {
+  activeDives,
+  archiveDives,
   diveDataFromStore,
   loadStore,
   mergeUddfIntoStore,
@@ -40,12 +42,15 @@ export default function App() {
   const [diveFilters, setDiveFilters] =
     useState<DiveFilterConfig>(defaultDiveFilters);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [activeSidebarDive, setActiveSidebarDive] = useState<number | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadStore().then((loaded) => {
       setStore(loaded);
-      setTags(tagsFromStored(loaded.tags, loaded.dives));
+      setTags(tagsFromStored(loaded.tags, activeDives(loaded)));
       setGroupingConfig(defaultGroupingConfig());
     });
   }, []);
@@ -73,7 +78,7 @@ export default function App() {
       if (!prev) return prev;
       const updated: DiveStore = {
         ...prev,
-        tags: tagsToStored(newTags, prev.dives),
+        tags: tagsToStored(newTags, activeDives(prev)),
       };
       saveStore(updated);
       return updated;
@@ -116,6 +121,18 @@ export default function App() {
     [],
   );
 
+  const handleArchiveDive = useCallback((index: number) => {
+    setStore((prev) => {
+      if (!prev) return prev;
+      const updated = archiveDives(prev, [index]);
+      saveStore(updated);
+      setTags(tagsFromStored(updated.tags, activeDives(updated)));
+      return updated;
+    });
+    setActiveSidebarDive(null);
+    setHiddenDives(new Set());
+  }, []);
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -137,7 +154,7 @@ export default function App() {
           totalAdded += added;
         }
         saveStore(current);
-        setTags(tagsFromStored(current.tags, current.dives));
+        setTags(tagsFromStored(current.tags, activeDives(current)));
         setImportMessage(
           totalAdded > 0
             ? `Imported ${totalAdded} new dive${totalAdded === 1 ? "" : "s"}`
@@ -229,17 +246,25 @@ export default function App() {
           weights={data.weights}
           exposureSuits={data.exposureSuits}
           hiddenDives={hiddenDives}
+          activeDiveIndex={activeSidebarDive}
+          onDiveActivate={setActiveSidebarDive}
           onToggleVisibility={toggleVisibility}
           tags={tags}
           onTagsChange={handleTagsChange}
           onDisciplinesAssign={handleDisciplinesAssign}
           onWeightAssign={handleWeightAssign}
           onExposureSuitAssign={handleExposureSuitAssign}
+          onArchiveDive={handleArchiveDive}
           diveFilters={diveFilters}
         />
         <main className="app-main">
           {processed.series.length > 0 ? (
-            <Chart2D processed={processed} />
+            <Chart2D
+              processed={processed}
+              visibleIndices={visibleIndices}
+              activeDiveIndex={activeSidebarDive}
+              onActiveDiveChange={setActiveSidebarDive}
+            />
           ) : (
             <div className="chart-empty">
               No dives to display. Import .uddf files to get started.
