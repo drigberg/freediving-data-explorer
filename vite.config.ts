@@ -6,7 +6,15 @@ import { fileURLToPath } from "node:url";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DIVES_PATH = path.resolve(__dirname, "dives.json");
+const DATA_DIR = path.resolve(__dirname, "data");
+const DATA_PATH = path.resolve(DATA_DIR, "data.json");
+const LEGACY_DATA_PATH = path.resolve(DATA_DIR, "dives.json");
+
+const EMPTY_STORE = JSON.stringify({ dives: [], tags: [] }, null, 2);
+
+function ensureDataDir(): void {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -32,13 +40,16 @@ function divesApiPlugin() {
 
     if (req.method === "GET") {
       try {
-        if (!fs.existsSync(DIVES_PATH)) {
-          fs.writeFileSync(
-            DIVES_PATH,
-            JSON.stringify({ dives: [], tags: [] }, null, 2)
-          );
+        let content: string;
+        if (fs.existsSync(DATA_PATH)) {
+          content = fs.readFileSync(DATA_PATH, "utf-8");
+        } else if (fs.existsSync(LEGACY_DATA_PATH)) {
+          content = fs.readFileSync(LEGACY_DATA_PATH, "utf-8");
+        } else {
+          ensureDataDir();
+          fs.writeFileSync(DATA_PATH, EMPTY_STORE);
+          content = EMPTY_STORE;
         }
-        const content = fs.readFileSync(DIVES_PATH, "utf-8");
         res.setHeader("Content-Type", "application/json");
         res.statusCode = 200;
         res.end(content);
@@ -53,7 +64,8 @@ function divesApiPlugin() {
       try {
         const body = await readBody(req);
         JSON.parse(body);
-        fs.writeFileSync(DIVES_PATH, body);
+        ensureDataDir();
+        fs.writeFileSync(DATA_PATH, body);
         res.statusCode = 200;
         res.end(body);
       } catch (err) {
