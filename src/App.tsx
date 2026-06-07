@@ -19,6 +19,14 @@ import {
   tagsToStored,
   type DiveStore,
 } from "./storage";
+import {
+  defaultDiveFilters,
+  filterOptionsFromData,
+  sliceDiveData,
+  visibleDiveIndices,
+  type DiveFilterConfig,
+} from "./filters";
+import FilterControls from "./FilterControls";
 import GroupingControls from "./GroupingControls";
 import Sidebar from "./Sidebar";
 import Chart2D from "./Chart2D";
@@ -33,6 +41,9 @@ export default function App() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [groupingConfig, setGroupingConfig] = useState<GroupingConfig | null>(
     null
+  );
+  const [diveFilters, setDiveFilters] = useState<DiveFilterConfig>(
+    defaultDiveFilters
   );
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -152,49 +163,29 @@ export default function App() {
     []
   );
 
-  const { filteredData } = useMemo(() => {
+  const filterOptions = useMemo(
+    () => (data ? filterOptionsFromData(data) : null),
+    [data]
+  );
+
+  const visibleIndices = useMemo(() => {
+    if (!data) return [];
+    return visibleDiveIndices(data, hiddenDives, diveFilters);
+  }, [data, hiddenDives, diveFilters]);
+
+  const filteredData = useMemo<DiveData>(() => {
     if (!data) {
       return {
-        filteredData: {
-          seriesNames: [],
-          seriesData: [],
-          disciplines: [],
-          weights: [],
-          safeties: [],
-          exposureSuits: [],
-        } as DiveData,
+        seriesNames: [],
+        seriesData: [],
+        disciplines: [],
+        weights: [],
+        safeties: [],
+        exposureSuits: [],
       };
     }
-
-    const seriesNames: string[] = [];
-    const seriesData: [number, number][][] = [];
-    const disciplines: (string | undefined)[] = [];
-    const weights: (number | undefined)[] = [];
-    const safeties: (boolean | undefined)[] = [];
-    const exposureSuits: (ExposureSuit | undefined)[] = [];
-    const originalToFiltered = new Map<number, number>();
-    for (let i = 0; i < data.seriesNames.length; i++) {
-      if (!hiddenDives.has(i)) {
-        originalToFiltered.set(i, seriesNames.length);
-        seriesNames.push(data.seriesNames[i]);
-        seriesData.push(data.seriesData[i]);
-        disciplines.push(data.disciplines[i]);
-        weights.push(data.weights[i]);
-        safeties.push(data.safeties[i]);
-        exposureSuits.push(data.exposureSuits[i]);
-      }
-    }
-    return {
-      filteredData: {
-        seriesNames,
-        seriesData,
-        disciplines,
-        weights,
-        safeties,
-        exposureSuits,
-      } as DiveData,
-    };
-  }, [data, hiddenDives]);
+    return sliceDiveData(data, visibleIndices);
+  }, [data, visibleIndices]);
 
   const processed = useMemo(
     () =>
@@ -242,6 +233,15 @@ export default function App() {
           </div>
         </div>
       </header>
+      {filterOptions && (
+        <FilterControls
+          filters={diveFilters}
+          options={filterOptions}
+          visibleCount={visibleIndices.length}
+          totalCount={data.seriesNames.length}
+          onChange={setDiveFilters}
+        />
+      )}
       <GroupingControls
         config={groupingConfig}
         totalSeries={filteredData.seriesNames.length}
@@ -263,6 +263,7 @@ export default function App() {
           onWeightAssign={handleWeightAssign}
           onSafetyAssign={handleSafetyAssign}
           onExposureSuitAssign={handleExposureSuitAssign}
+          diveFilters={diveFilters}
         />
         <main className="app-main">
           {mode === "2d" ? (

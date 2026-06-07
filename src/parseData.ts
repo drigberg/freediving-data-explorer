@@ -5,6 +5,11 @@ export interface ExposureSuit {
   thicknessMm: number;
 }
 
+export function formatExposureSuit(suit: ExposureSuit): string {
+  const cellType = suit.openCell ? "Open Cell" : "Closed Cell";
+  return `${cellType}, ${suit.thicknessMm}mm`;
+}
+
 export interface DiveData {
   seriesNames: string[];
   seriesData: [number, number][][];

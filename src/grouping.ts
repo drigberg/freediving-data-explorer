@@ -1,4 +1,5 @@
-import type { DiveData, ExposureSuit } from "./parseData";
+import type { DiveData } from "./parseData";
+import { formatExposureSuit } from "./parseData";
 
 // ── Types ──
 
@@ -239,11 +240,6 @@ function groupByProperty(
     }));
 }
 
-function exposureSuitLabel(suit: ExposureSuit): string {
-  const cellType = suit.openCell ? "Open Cell" : "Closed Cell";
-  return `${cellType}, ${suit.thicknessMm}mm`;
-}
-
 function groupByDiscipline(data: DiveData): Group[] {
   return groupByProperty(
     data,
@@ -278,7 +274,7 @@ function groupByExposureSuit(data: DiveData): Group[] {
     data,
     (i) => {
       const suit = data.exposureSuits[i];
-      return suit ? exposureSuitLabel(suit) : undefined;
+      return suit ? formatExposureSuit(suit) : undefined;
     },
     (keys) => {
       const unknown = keys.filter((k) => k === "(Unknown)");

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from "react";
+import { Fragment, useState, useCallback, useRef, useMemo } from "react";
 import { shortDateLabel } from "./colors";
 import TagDialog from "./TagDialog";
 import DisciplineDialog from "./DisciplineDialog";
@@ -8,6 +8,8 @@ import ExposureSuitDialog from "./ExposureSuitDialog";
 import EditDialog from "./AddTagDialog";
 import { disciplineAbbrev } from "./disciplines";
 import type { ExposureSuit } from "./parseData";
+import { extractDateKey, formatExposureSuit } from "./parseData";
+import { divePassesFilters, type DiveFilterConfig } from "./filters";
 import type { Tag } from "./grouping";
 
 interface SidebarProps {
@@ -25,6 +27,7 @@ interface SidebarProps {
   onWeightAssign: (indices: number[], weightKg: number) => void;
   onSafetyAssign: (indices: number[], safety: boolean) => void;
   onExposureSuitAssign: (indices: number[], suit: ExposureSuit) => void;
+  diveFilters: DiveFilterConfig;
 }
 
 type AssignMode =
@@ -33,11 +36,6 @@ type AssignMode =
   | { kind: "weight"; value: number }
   | { kind: "safety"; value: boolean }
   | { kind: "exposureSuit"; value: ExposureSuit };
-
-function formatExposureSuit(suit: ExposureSuit): string {
-  const cellType = suit.openCell ? "Open Cell" : "Closed Cell";
-  return `${cellType}, ${suit.thicknessMm}mm`;
-}
 
 function assignModeDescription(mode: AssignMode): { action: string; label: string } {
   switch (mode.kind) {
@@ -135,6 +133,7 @@ export default function Sidebar({
   onWeightAssign,
   onSafetyAssign,
   onExposureSuitAssign,
+  diveFilters,
 }: SidebarProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
@@ -280,6 +279,40 @@ export default function Sidebar({
     setShowEditDialog(true);
   }, []);
 
+  const diveGroupsByYear = useMemo(() => {
+    const diveData = {
+      seriesNames,
+      seriesData,
+      disciplines,
+      weights,
+      safeties,
+      exposureSuits,
+    };
+    const indices = [...seriesNames.keys()]
+      .reverse()
+      .filter((i) => divePassesFilters(diveData, i, diveFilters));
+
+    const groups: { year: string; indices: number[] }[] = [];
+    for (const i of indices) {
+      const year = extractDateKey(seriesNames[i])?.slice(0, 4) ?? "Unknown";
+      const last = groups[groups.length - 1];
+      if (last?.year === year) {
+        last.indices.push(i);
+      } else {
+        groups.push({ year, indices: [i] });
+      }
+    }
+    return groups;
+  }, [
+    seriesNames,
+    seriesData,
+    disciplines,
+    weights,
+    safeties,
+    exposureSuits,
+    diveFilters,
+  ]);
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -311,7 +344,10 @@ export default function Sidebar({
       )}
 
       <ul className="sidebar-dive-list">
-        {[...seriesNames.keys()].reverse().map((i) => {
+        {diveGroupsByYear.map((group) => (
+          <Fragment key={group.year}>
+            <li className="sidebar-year-header">{group.year}</li>
+            {group.indices.map((i) => {
           const name = seriesNames[i];
           const isHidden = hiddenDives.has(i);
           const isSelected = selection.has(i);
@@ -413,6 +449,8 @@ export default function Sidebar({
             </li>
           );
         })}
+          </Fragment>
+        ))}
       </ul>
 
       {showEditDialog && (

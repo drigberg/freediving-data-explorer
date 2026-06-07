@@ -109,6 +109,124 @@ body,
   background: rgba(255, 255, 255, 0.04);
 }
 
+/* ── Filter controls ── */
+
+.filter-controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.filter-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  width: 100%;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.filter-sublabel {
+  font-size: 0.75rem;
+  color: #6e7681;
+  white-space: nowrap;
+}
+
+.filter-count {
+  font-size: 0.75rem;
+  color: #8b949e;
+  white-space: nowrap;
+}
+
+.filter-count.active {
+  color: #58a6ff;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.filter-chips button {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #8b949e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter-chips button.active {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: rgba(88, 166, 255, 0.35);
+  color: #58a6ff;
+}
+
+.filter-chips button:hover:not(.active) {
+  color: #c9d1d9;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.filter-date-input {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #e6edf3;
+  color-scheme: dark;
+}
+
+.filter-date-separator {
+  font-size: 0.75rem;
+  color: #6e7681;
+}
+
+.filter-clear-btn {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: #8b949e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-clear-btn:hover:not(:disabled) {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.filter-clear-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ── Grouping controls ── */
 
 .grouping-controls {
@@ -315,6 +433,20 @@ body,
   flex: 1;
   overflow-y: auto;
   padding: 4px 0;
+}
+
+.sidebar-year-header {
+  list-style: none;
+  padding: 10px 12px 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6e7681;
+}
+
+.sidebar-year-header:first-child {
+  padding-top: 4px;
 }
 
 .sidebar-dive-item {
