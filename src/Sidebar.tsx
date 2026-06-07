@@ -1,5 +1,5 @@
 import { Fragment, useState, useCallback, useRef, useMemo } from "react";
-import { shortDateLabel } from "./colors";
+import { shortDiveLabel } from "./colors";
 import TagDialog from "./TagDialog";
 import DisciplineDialog from "./DisciplineDialog";
 import WeightDialog from "./WeightDialog";
@@ -17,6 +17,7 @@ import type { Tag } from "./grouping";
 
 interface SidebarProps {
   seriesNames: string[];
+  diveNumbers: number[];
   seriesData: ProfilePoint[][];
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
@@ -140,6 +141,7 @@ function groupIndicesByYear(
 
 export default function Sidebar({
   seriesNames,
+  diveNumbers,
   seriesData,
   disciplines,
   weights,
@@ -344,7 +346,9 @@ export default function Sidebar({
           onClick={(e) => handleSelectionClick(i, e.shiftKey)}
         >
           <span className="tag-checkbox">{isSelected ? "✓" : ""}</span>
-          <span className="dive-name">{shortDateLabel(name)}</span>
+          <span className="dive-name">
+            {shortDiveLabel(name, diveNumbers[i])}
+          </span>
           {discipline && (
             <span className={disciplineClass}>
               {disciplineAbbrev(discipline)}
@@ -386,7 +390,7 @@ export default function Sidebar({
             className="dive-name clickable"
             onClick={() => toggleExpanded(i)}
           >
-            {shortDateLabel(name)}
+            {shortDiveLabel(name, diveNumbers[i])}
           </span>
           {discipline && (
             <span className={disciplineClass}>

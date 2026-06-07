@@ -223,6 +223,7 @@ export default function App() {
       <div className="app-body">
         <Sidebar
           seriesNames={data.seriesNames}
+          diveNumbers={data.diveNumbers}
           seriesData={data.seriesData}
           disciplines={data.disciplines}
           weights={data.weights}
@@ -237,7 +238,13 @@ export default function App() {
           diveFilters={diveFilters}
         />
         <main className="app-main">
-          <Chart2D processed={processed} />
+          {processed.series.length > 0 ? (
+            <Chart2D processed={processed} />
+          ) : (
+            <div className="chart-empty">
+              No dives to display. Import .uddf files to get started.
+            </div>
+          )}
         </main>
       </div>
     </div>

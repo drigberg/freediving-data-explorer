@@ -59,3 +59,9 @@ export function shortDateLabel(seriesName: string): string {
   const day = parseInt(match[3], 10);
   return `${months[monthIdx]} ${day}`;
 }
+
+export function shortDiveLabel(seriesName: string, diveNumber: number): string {
+  const date = shortDateLabel(seriesName);
+  if (diveNumber > 0) return `${date} #${diveNumber}`;
+  return date;
+}

@@ -1,4 +1,8 @@
-- Allow grouping by "has tag: (list of all other tags)"
-- All importing ALL dives, with option to auto-select the deepest or longest dive per session
-- Temperature
+- Allow selecting dive by clicking on the line in the chart
+- Allow archiving a dive, and add an option to only show archived dives
+- Allow removing tags from dives
+- Allow grouping by:
+  - Temperature
+  - Has tag (list of all other tags)
+- Show temperature on the graph
 - Ascent and descent speed graph
