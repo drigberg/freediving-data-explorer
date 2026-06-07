@@ -9,7 +9,11 @@ import EditDialog from "./AddTagDialog";
 import { disciplineAbbrev } from "./disciplines";
 import type { ExposureSuit } from "./parseData";
 import { extractDateKey, formatExposureSuit } from "./parseData";
-import { divePassesFilters, type DiveFilterConfig } from "./filters";
+import {
+  divePassesFilters,
+  hasActiveFilters,
+  type DiveFilterConfig,
+} from "./filters";
 import type { Tag } from "./grouping";
 
 interface SidebarProps {
@@ -119,6 +123,25 @@ function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}m${String(s).padStart(2, "0")}s`;
+}
+
+type YearGroup = { year: string; indices: number[] };
+
+function groupIndicesByYear(
+  indices: number[],
+  seriesNames: string[],
+): YearGroup[] {
+  const groups: YearGroup[] = [];
+  for (const i of indices) {
+    const year = extractDateKey(seriesNames[i])?.slice(0, 4) ?? "Unknown";
+    const last = groups[groups.length - 1];
+    if (last?.year === year) {
+      last.indices.push(i);
+    } else {
+      groups.push({ year, indices: [i] });
+    }
+  }
+  return groups;
 }
 
 export default function Sidebar({
@@ -282,39 +305,149 @@ export default function Sidebar({
     setShowEditDialog(true);
   }, []);
 
-  const diveGroupsByYear = useMemo(() => {
-    const diveData = {
+  const diveData = useMemo(
+    () => ({
       seriesNames,
       seriesData,
       disciplines,
       weights,
       safeties,
       exposureSuits,
-    };
-    const indices = [...seriesNames.keys()]
-      .reverse()
-      .filter((i) => divePassesFilters(diveData, i, diveFilters));
+    }),
+    [seriesNames, seriesData, disciplines, weights, safeties, exposureSuits],
+  );
 
-    const groups: { year: string; indices: number[] }[] = [];
-    for (const i of indices) {
-      const year = extractDateKey(seriesNames[i])?.slice(0, 4) ?? "Unknown";
-      const last = groups[groups.length - 1];
-      if (last?.year === year) {
-        last.indices.push(i);
-      } else {
-        groups.push({ year, indices: [i] });
+  const { includedGroups, excludedGroups } = useMemo(() => {
+    const filtering = hasActiveFilters(diveFilters);
+    const included: number[] = [];
+    const excluded: number[] = [];
+
+    for (const i of [...seriesNames.keys()].reverse()) {
+      if (divePassesFilters(diveData, i, diveFilters)) {
+        included.push(i);
+      } else if (filtering) {
+        excluded.push(i);
       }
     }
-    return groups;
-  }, [
-    seriesNames,
-    seriesData,
-    disciplines,
-    weights,
-    safeties,
-    exposureSuits,
-    diveFilters,
-  ]);
+
+    return {
+      includedGroups: groupIndicesByYear(included, seriesNames),
+      excludedGroups: filtering
+        ? groupIndicesByYear(excluded, seriesNames)
+        : [],
+    };
+  }, [seriesNames, diveData, diveFilters]);
+
+  const renderDiveEntry = (i: number, excluded: boolean) => {
+    const name = seriesNames[i];
+    const isHidden = hiddenDives.has(i);
+    const isSelected = selection.has(i);
+    const discipline = disciplines[i];
+    const mutedClass = excluded ? " filter-excluded" : "";
+
+    if (inSelectMode) {
+      return (
+        <li
+          key={i}
+          className={`sidebar-dive-item tagging${mutedClass} ${isSelected ? "selected" : ""}`}
+          onClick={(e) => handleSelectionClick(i, e.shiftKey)}
+        >
+          <span className="tag-checkbox">{isSelected ? "✓" : ""}</span>
+          <span className="dive-name">{shortDateLabel(name)}</span>
+          {discipline && (
+            <span className="dive-discipline">
+              {disciplineAbbrev(discipline)}
+            </span>
+          )}
+        </li>
+      );
+    }
+
+    const diveTags = tagsByDive.get(i) ?? [];
+    const isExpanded = expandedDives.has(i);
+    const points = seriesData[i];
+    const maxDepth =
+      points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
+    const duration =
+      points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
+    const weight = weights[i];
+    const safety = safeties[i];
+    const exposureSuit = exposureSuits[i];
+
+    return (
+      <li
+        key={i}
+        className={`sidebar-dive-entry${mutedClass} ${isExpanded ? "expanded" : ""}`}
+      >
+        <div className={`sidebar-dive-item${mutedClass}`}>
+          <button
+            className={`visibility-toggle ${isHidden ? "hidden-dive" : ""}`}
+            onClick={() => onToggleVisibility(i)}
+            title={isHidden ? "Show dive" : "Hide dive"}
+          >
+            <EyeIcon open={!isHidden} />
+          </button>
+          <span
+            className="dive-name clickable"
+            onClick={() => toggleExpanded(i)}
+          >
+            {shortDateLabel(name)}
+          </span>
+          {discipline && (
+            <span className="dive-discipline">
+              {disciplineAbbrev(discipline)}
+            </span>
+          )}
+          <span className="dive-chevron" onClick={() => toggleExpanded(i)}>
+            <ChevronIcon open={isExpanded} />
+          </span>
+        </div>
+        {isExpanded && (
+          <ul className="dive-details">
+            <li className="dive-detail-item">
+              Max depth: {maxDepth.toFixed(1)}m
+            </li>
+            <li className="dive-detail-item">
+              Duration: {formatDuration(duration)}
+            </li>
+            {discipline && (
+              <li className="dive-detail-item">Discipline: {discipline}</li>
+            )}
+            {weight !== undefined && (
+              <li className="dive-detail-item">Weight: {weight}kg</li>
+            )}
+            {safety !== undefined && (
+              <li className="dive-detail-item">
+                Safety: {safety ? "Yes" : "No"}
+              </li>
+            )}
+            {exposureSuit && (
+              <li className="dive-detail-item">
+                Exposure Suit: {formatExposureSuit(exposureSuit)}
+              </li>
+            )}
+            {diveTags.map((tagName) => (
+              <li key={tagName} className="dive-detail-item">
+                {tagName}
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  };
+
+  const renderYearGroups = (groups: YearGroup[], excluded: boolean) =>
+    groups.map((group) => (
+      <Fragment key={`${excluded ? "excluded-" : ""}${group.year}`}>
+        <li
+          className={`sidebar-year-header${excluded ? " filter-excluded" : ""}`}
+        >
+          {group.year}
+        </li>
+        {group.indices.map((i) => renderDiveEntry(i, excluded))}
+      </Fragment>
+    ));
 
   return (
     <aside className="sidebar">
@@ -347,112 +480,13 @@ export default function Sidebar({
       )}
 
       <ul className="sidebar-dive-list">
-        {diveGroupsByYear.map((group) => (
-          <Fragment key={group.year}>
-            <li className="sidebar-year-header">{group.year}</li>
-            {group.indices.map((i) => {
-              const name = seriesNames[i];
-              const isHidden = hiddenDives.has(i);
-              const isSelected = selection.has(i);
-              const discipline = disciplines[i];
-
-              if (inSelectMode) {
-                return (
-                  <li
-                    key={i}
-                    className={`sidebar-dive-item tagging ${isSelected ? "selected" : ""}`}
-                    onClick={(e) => handleSelectionClick(i, e.shiftKey)}
-                  >
-                    <span className="tag-checkbox">
-                      {isSelected ? "✓" : ""}
-                    </span>
-                    <span className="dive-name">{shortDateLabel(name)}</span>
-                    {discipline && (
-                      <span className="dive-discipline">
-                        {disciplineAbbrev(discipline)}
-                      </span>
-                    )}
-                  </li>
-                );
-              }
-
-              const diveTags = tagsByDive.get(i) ?? [];
-              const isExpanded = expandedDives.has(i);
-              const points = seriesData[i];
-              const maxDepth =
-                points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
-              const duration =
-                points.length > 0
-                  ? points[points.length - 1][0] - points[0][0]
-                  : 0;
-              const weight = weights[i];
-              const safety = safeties[i];
-              const exposureSuit = exposureSuits[i];
-
-              return (
-                <li
-                  key={i}
-                  className={`sidebar-dive-entry ${isExpanded ? "expanded" : ""}`}
-                >
-                  <div className="sidebar-dive-item">
-                    <button
-                      className={`visibility-toggle ${isHidden ? "hidden-dive" : ""}`}
-                      onClick={() => onToggleVisibility(i)}
-                      title={isHidden ? "Show dive" : "Hide dive"}
-                    >
-                      <EyeIcon open={!isHidden} />
-                    </button>
-                    <span
-                      className="dive-name clickable"
-                      onClick={() => toggleExpanded(i)}
-                    >
-                      {shortDateLabel(name)}
-                    </span>
-                    {discipline && (
-                      <span className="dive-discipline">
-                        {disciplineAbbrev(discipline)}
-                      </span>
-                    )}
-                    <span
-                      className="dive-chevron"
-                      onClick={() => toggleExpanded(i)}
-                    >
-                      <ChevronIcon open={isExpanded} />
-                    </span>
-                  </div>
-                  {isExpanded && (
-                    <ul className="dive-details">
-                      <li className="dive-detail-item">
-                        Max depth: {maxDepth.toFixed(1)}m
-                      </li>
-                      <li className="dive-detail-item">
-                        Duration: {formatDuration(duration)}
-                      </li>
-                      {weight !== undefined && (
-                        <li className="dive-detail-item">Weight: {weight}kg</li>
-                      )}
-                      {safety !== undefined && (
-                        <li className="dive-detail-item">
-                          Safety: {safety ? "Yes" : "No"}
-                        </li>
-                      )}
-                      {exposureSuit && (
-                        <li className="dive-detail-item">
-                          Exposure Suit: {formatExposureSuit(exposureSuit)}
-                        </li>
-                      )}
-                      {diveTags.map((tagName) => (
-                        <li key={tagName} className="dive-detail-item">
-                          {tagName}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </Fragment>
-        ))}
+        {renderYearGroups(includedGroups, false)}
+        {!inSelectMode && excludedGroups.length > 0 && (
+          <>
+            <li className="sidebar-excluded-divider">Excluded By Filters</li>
+            {renderYearGroups(excludedGroups, true)}
+          </>
+        )}
       </ul>
 
       {showEditDialog && (

@@ -106,6 +106,21 @@ export default function FilterControls({
             />
           </>
         )}
+        {options.safeties.length > 0 && (
+          <>
+            <span className="filter-sublabel">Is safety dive</span>
+            <FilterChips
+              values={options.safeties.map(String)}
+              selected={filters.safeties.map(String)}
+              onToggle={(safety) =>
+                update({
+                  safeties: toggleValue(filters.safeties, safety === "true"),
+                })
+              }
+              formatLabel={(safety) => (safety === "true" ? "Yes" : "No")}
+            />
+          </>
+        )}
       </div>
 
       {(options.dateMin || options.dateMax) && (
@@ -149,6 +164,7 @@ export default function FilterControls({
               disciplines: [],
               weights: [],
               exposureSuits: [],
+              safeties: [],
               dateFrom: null,
               dateTo: null,
             })

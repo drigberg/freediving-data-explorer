@@ -5,6 +5,7 @@ export interface DiveFilterConfig {
   disciplines: string[];
   weights: number[];
   exposureSuits: string[];
+  safeties: boolean[];
   dateFrom: string | null;
   dateTo: string | null;
 }
@@ -13,8 +14,17 @@ export interface DiveFilterOptions {
   disciplines: string[];
   weights: number[];
   exposureSuits: string[];
+  safeties: boolean[];
   dateMin: string;
   dateMax: string;
+}
+
+function isSafetyDiveYes(safety: boolean | undefined): boolean {
+  return safety === true;
+}
+
+function isSafetyDiveNo(safety: boolean | undefined): boolean {
+  return !isSafetyDiveYes(safety);
 }
 
 export function defaultDiveFilters(): DiveFilterConfig {
@@ -22,6 +32,7 @@ export function defaultDiveFilters(): DiveFilterConfig {
     disciplines: [],
     weights: [],
     exposureSuits: [],
+    safeties: [],
     dateFrom: null,
     dateTo: null,
   };
@@ -31,6 +42,8 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
   const disciplineSet = new Set<string>();
   const weightSet = new Set<number>();
   const exposureSuitSet = new Set<string>();
+  let hasSafetyYes = false;
+  let hasSafetyNo = false;
   let dateMin = "";
   let dateMax = "";
 
@@ -44,6 +57,10 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
     const suit = data.exposureSuits[i];
     if (suit) exposureSuitSet.add(formatExposureSuit(suit));
 
+    const safety = data.safeties[i];
+    if (isSafetyDiveYes(safety)) hasSafetyYes = true;
+    if (isSafetyDiveNo(safety)) hasSafetyNo = true;
+
     const date = extractDateKey(data.seriesNames[i]);
     if (date) {
       if (!dateMin || date < dateMin) dateMin = date;
@@ -55,6 +72,10 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
     disciplines: [...disciplineSet],
     weights: [...weightSet].sort((a, b) => a - b),
     exposureSuits: [...exposureSuitSet].sort(),
+    safeties: [
+      ...(hasSafetyYes ? [true] : []),
+      ...(hasSafetyNo ? [false] : []),
+    ],
     dateMin,
     dateMax,
   };
@@ -65,6 +86,7 @@ export function hasActiveFilters(filters: DiveFilterConfig): boolean {
     filters.disciplines.length > 0 ||
     filters.weights.length > 0 ||
     filters.exposureSuits.length > 0 ||
+    filters.safeties.length > 0 ||
     filters.dateFrom !== null ||
     filters.dateTo !== null
   );
@@ -94,6 +116,14 @@ export function divePassesFilters(
     if (!suit || !filters.exposureSuits.includes(formatExposureSuit(suit))) {
       return false;
     }
+  }
+
+  if (filters.safeties.length > 0) {
+    const safety = data.safeties[index];
+    const matches =
+      (filters.safeties.includes(true) && isSafetyDiveYes(safety)) ||
+      (filters.safeties.includes(false) && isSafetyDiveNo(safety));
+    if (!matches) return false;
   }
 
   const date = extractDateKey(data.seriesNames[index]);

@@ -418,6 +418,42 @@ body,
   padding-top: 4px;
 }
 
+.sidebar-excluded-divider {
+  list-style: none;
+  padding: 12px 12px 6px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #484f58;
+}
+
+.sidebar-dive-entry.filter-excluded,
+.sidebar-dive-item.filter-excluded {
+  color: #6e7681;
+}
+
+.sidebar-dive-entry.filter-excluded .dive-discipline,
+.sidebar-dive-entry.filter-excluded .dive-chevron,
+.sidebar-dive-entry.filter-excluded .dive-detail-item,
+.sidebar-dive-item.filter-excluded .dive-discipline {
+  color: #484f58;
+}
+
+.sidebar-dive-entry.filter-excluded .visibility-toggle {
+  color: #484f58;
+}
+
+.sidebar-dive-entry.filter-excluded .dive-name.clickable:hover {
+  color: #8b949e;
+}
+
+.sidebar-year-header.filter-excluded {
+  color: #484f58;
+}
+
 .sidebar-dive-item {
   display: flex;
   align-items: center;
