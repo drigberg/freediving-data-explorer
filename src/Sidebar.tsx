@@ -1,5 +1,5 @@
 import { Fragment, useState, useCallback, useRef, useMemo } from "react";
-import { shortDiveLabel } from "./colors";
+import { shortDateLabel } from "./colors";
 import TagDialog from "./TagDialog";
 import DisciplineDialog from "./DisciplineDialog";
 import WeightDialog from "./WeightDialog";
@@ -120,23 +120,43 @@ function formatDuration(seconds: number): string {
   return `${m}m${String(s).padStart(2, "0")}s`;
 }
 
-type YearGroup = { year: string; indices: number[] };
+function formatDiveNumber(diveNumber: number): string {
+  return diveNumber > 0 ? `#${diveNumber}` : "#?";
+}
 
-function groupIndicesByYear(
+type DateGroup = { dateKey: string; dateLabel: string; indices: number[] };
+type YearGroup = { year: string; dateGroups: DateGroup[] };
+
+function groupIndicesByYearAndDate(
   indices: number[],
   seriesNames: string[],
 ): YearGroup[] {
-  const groups: YearGroup[] = [];
+  const yearGroups: YearGroup[] = [];
+
   for (const i of indices) {
-    const year = extractDateKey(seriesNames[i])?.slice(0, 4) ?? "Unknown";
-    const last = groups[groups.length - 1];
-    if (last?.year === year) {
-      last.indices.push(i);
-    } else {
-      groups.push({ year, indices: [i] });
+    const dateKey = extractDateKey(seriesNames[i]) ?? "Unknown";
+    const year = dateKey.slice(0, 4);
+    let yearGroup = yearGroups[yearGroups.length - 1];
+
+    if (yearGroup?.year !== year) {
+      yearGroup = { year, dateGroups: [] };
+      yearGroups.push(yearGroup);
     }
+
+    let dateGroup = yearGroup.dateGroups[yearGroup.dateGroups.length - 1];
+    if (dateGroup?.dateKey !== dateKey) {
+      dateGroup = {
+        dateKey,
+        dateLabel: shortDateLabel(seriesNames[i]),
+        indices: [],
+      };
+      yearGroup.dateGroups.push(dateGroup);
+    }
+
+    dateGroup.indices.push(i);
   }
-  return groups;
+
+  return yearGroups;
 }
 
 export default function Sidebar({
@@ -161,6 +181,19 @@ export default function Sidebar({
   const [showWeightDialog, setShowWeightDialog] = useState(false);
   const [showExposureSuitDialog, setShowExposureSuitDialog] = useState(false);
   const [expandedDives, setExpandedDives] = useState<Set<number>>(new Set());
+  const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
+
+  const toggleDateCollapsed = useCallback((dateKey: string) => {
+    setCollapsedDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) {
+        next.delete(dateKey);
+      } else {
+        next.add(dateKey);
+      }
+      return next;
+    });
+  }, []);
 
   const toggleExpanded = useCallback((index: number) => {
     setExpandedDives((prev) => {
@@ -321,15 +354,14 @@ export default function Sidebar({
     }
 
     return {
-      includedGroups: groupIndicesByYear(included, seriesNames),
+      includedGroups: groupIndicesByYearAndDate(included, seriesNames),
       excludedGroups: filtering
-        ? groupIndicesByYear(excluded, seriesNames)
+        ? groupIndicesByYearAndDate(excluded, seriesNames)
         : [],
     };
   }, [seriesNames, diveData, diveFilters]);
 
   const renderDiveEntry = (i: number, excluded: boolean) => {
-    const name = seriesNames[i];
     const isHidden = hiddenDives.has(i);
     const isSelected = selection.has(i);
     const discipline = disciplines[i];
@@ -337,6 +369,12 @@ export default function Sidebar({
       ? `dive-discipline${isSafetyDynbDiscipline(discipline) ? " safety-dynb-discipline" : ""}`
       : "";
     const mutedClass = excluded ? " filter-excluded" : "";
+    const points = seriesData[i];
+    const maxDepth =
+      points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
+    const duration =
+      points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
+    const summary = formatDiveNumber(diveNumbers[i]);
 
     if (inSelectMode) {
       return (
@@ -346,9 +384,7 @@ export default function Sidebar({
           onClick={(e) => handleSelectionClick(i, e.shiftKey)}
         >
           <span className="tag-checkbox">{isSelected ? "✓" : ""}</span>
-          <span className="dive-name">
-            {shortDiveLabel(name, diveNumbers[i])}
-          </span>
+          <span className="dive-summary">{summary}</span>
           {discipline && (
             <span className={disciplineClass}>
               {disciplineAbbrev(discipline)}
@@ -360,11 +396,6 @@ export default function Sidebar({
 
     const diveTags = tagsByDive.get(i) ?? [];
     const isExpanded = expandedDives.has(i);
-    const points = seriesData[i];
-    const maxDepth =
-      points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
-    const duration =
-      points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
     const temps = points
       .map(([, , t]) => t)
       .filter((t): t is number => t !== undefined);
@@ -387,19 +418,21 @@ export default function Sidebar({
             <EyeIcon open={!isHidden} />
           </button>
           <span
-            className="dive-name clickable"
+            className="dive-summary clickable"
             onClick={() => toggleExpanded(i)}
           >
-            {shortDiveLabel(name, diveNumbers[i])}
+            {summary}
           </span>
-          {discipline && (
-            <span className={disciplineClass}>
-              {disciplineAbbrev(discipline)}
+          <div className="dive-item-right">
+            {discipline && (
+              <span className={disciplineClass}>
+                {disciplineAbbrev(discipline)}
+              </span>
+            )}
+            <span className="dive-chevron" onClick={() => toggleExpanded(i)}>
+              <ChevronIcon open={isExpanded} />
             </span>
-          )}
-          <span className="dive-chevron" onClick={() => toggleExpanded(i)}>
-            <ChevronIcon open={isExpanded} />
-          </span>
+          </div>
         </div>
         {isExpanded && (
           <ul className="dive-details">
@@ -453,7 +486,26 @@ export default function Sidebar({
         >
           {group.year}
         </li>
-        {group.indices.map((i) => renderDiveEntry(i, excluded))}
+        {group.dateGroups.map((dateGroup) => {
+          const collapseKey = `${excluded ? "excluded:" : ""}${dateGroup.dateKey}`;
+          const isCollapsed = collapsedDates.has(collapseKey);
+
+          return (
+            <Fragment key={`${excluded ? "excluded-" : ""}${dateGroup.dateKey}`}>
+              <li
+                className={`sidebar-date-header clickable${excluded ? " filter-excluded" : ""}${isCollapsed ? " collapsed" : ""}`}
+                onClick={() => toggleDateCollapsed(collapseKey)}
+              >
+                <span className="sidebar-date-label">{dateGroup.dateLabel}</span>
+                <span className="date-toggle-label">
+                  {isCollapsed ? "show" : "hide"}
+                </span>
+              </li>
+              {!isCollapsed &&
+                dateGroup.indices.map((i) => renderDiveEntry(i, excluded))}
+            </Fragment>
+          );
+        })}
       </Fragment>
     ));
 

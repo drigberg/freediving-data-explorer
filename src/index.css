@@ -418,6 +418,52 @@ body,
   padding-top: 4px;
 }
 
+.sidebar-date-header {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8b949e;
+}
+
+.sidebar-date-header.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sidebar-date-header.clickable:hover {
+  color: #c9d1d9;
+}
+
+.sidebar-date-header.clickable:hover .date-toggle-label {
+  color: #8b949e;
+}
+
+.sidebar-date-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.date-toggle-label {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #6e7681;
+  text-transform: lowercase;
+}
+
+.sidebar-date-header.filter-excluded {
+  color: #484f58;
+}
+
+.sidebar-date-header.filter-excluded.clickable:hover {
+  color: #6e7681;
+}
+
 .sidebar-excluded-divider {
   list-style: none;
   padding: 12px 12px 6px;
@@ -446,7 +492,7 @@ body,
   color: #484f58;
 }
 
-.sidebar-dive-entry.filter-excluded .dive-name.clickable:hover {
+.sidebar-dive-entry.filter-excluded .dive-summary.clickable:hover {
   color: #8b949e;
 }
 
@@ -521,12 +567,20 @@ body,
   color: #6e7681;
 }
 
-.dive-name {
+.dive-summary {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
   min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.dive-item-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .sidebar-dive-entry {
@@ -537,11 +591,11 @@ body,
   background: rgba(255, 255, 255, 0.02);
 }
 
-.dive-name.clickable {
+.dive-summary.clickable {
   cursor: pointer;
 }
 
-.dive-name.clickable:hover {
+.dive-summary.clickable:hover {
   color: #58a6ff;
 }
 
