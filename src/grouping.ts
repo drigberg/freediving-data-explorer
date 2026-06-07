@@ -6,8 +6,6 @@ import { formatExposureSuit } from "./parseData";
 export type GroupMode =
   | "none"
   | "dateInterval"
-  | "n"
-  | "percentile"
   | "discipline"
   | "weight"
   | "exposureSuit";
@@ -15,14 +13,9 @@ export type DateIntervalUnit = "month" | "quarter" | "year";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
 
-export const PERCENTILE_VALUES = [2, 5, 10, 20, 25, 100 / 3, 50] as const;
-
 export interface GroupingConfig {
   groupMode: GroupMode;
   dateIntervalUnit: DateIntervalUnit;
-  nValue: number;
-  percentileCriterion: RankCriterion;
-  percentileValue: number;
   displayMode: DisplayMode;
   maximumCriterion: RankCriterion;
 }
@@ -41,13 +34,10 @@ export interface ProcessedData {
   series: ProcessedSeries[];
 }
 
-export function defaultGroupingConfig(totalSeries: number): GroupingConfig {
+export function defaultGroupingConfig(): GroupingConfig {
   return {
     groupMode: "none",
     dateIntervalUnit: "month",
-    nValue: Math.min(3, totalSeries),
-    percentileCriterion: "deepest",
-    percentileValue: 50,
     displayMode: "average",
     maximumCriterion: "longest",
   };
@@ -151,64 +141,6 @@ function groupByDateInterval(data: DiveData, unit: DateIntervalUnit): Group[] {
     label: key,
     indices: buckets.get(key)!,
   }));
-}
-
-function groupByN(data: DiveData, n: number): Group[] {
-  const groups: Group[] = [];
-  for (let start = 0; start < data.seriesNames.length; start += n) {
-    const indices = [];
-    for (let j = start; j < Math.min(start + n, data.seriesNames.length); j++) {
-      indices.push(j);
-    }
-    const firstLabel = data.seriesNames[indices[0]].match(/^[\d-]+/)?.[0] ?? "";
-    const lastLabel =
-      data.seriesNames[indices[indices.length - 1]].match(/^[\d-]+/)?.[0] ?? "";
-    const label =
-      indices.length === 1 ? firstLabel : `${firstLabel} – ${lastLabel}`;
-    groups.push({ label, indices });
-  }
-  return groups;
-}
-
-function groupByPercentile(
-  data: DiveData,
-  criterion: RankCriterion,
-  percentile: number,
-): Group[] {
-  const ranked = data.seriesNames.map((_, i) => ({
-    index: i,
-    value:
-      criterion === "longest"
-        ? getDuration(data.seriesData[i])
-        : Math.abs(getMaxDepth(data.seriesData[i])),
-  }));
-  ranked.sort((a, b) => a.value - b.value);
-
-  const numBuckets = Math.round(100 / percentile);
-  const groups: Group[] = [];
-
-  for (let b = 0; b < numBuckets; b++) {
-    const lo = b / numBuckets;
-    const hi = (b + 1) / numBuckets;
-    const indices = ranked
-      .filter((_, ri) => {
-        const p = ri / ranked.length;
-        return p >= lo && (b === numBuckets - 1 ? p <= hi : p < hi);
-      })
-      .map((r) => r.index)
-      .sort((a, b) => a - b);
-
-    if (indices.length > 0) {
-      const pLo = Math.round(lo * 100);
-      const pHi = Math.round(hi * 100);
-      groups.push({
-        label: `P${pLo}–${pHi} (${criterion})`,
-        indices,
-      });
-    }
-  }
-
-  return groups;
 }
 
 function groupByProperty(
@@ -374,16 +306,6 @@ export function processData(
   switch (config.groupMode) {
     case "dateInterval":
       groups = groupByDateInterval(data, config.dateIntervalUnit);
-      break;
-    case "n":
-      groups = groupByN(data, config.nValue);
-      break;
-    case "percentile":
-      groups = groupByPercentile(
-        data,
-        config.percentileCriterion,
-        config.percentileValue,
-      );
       break;
     case "discipline":
       groups = groupByDiscipline(data);

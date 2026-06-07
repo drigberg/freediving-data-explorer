@@ -47,7 +47,7 @@ export default function App() {
     loadStore().then((loaded) => {
       setStore(loaded);
       setTags(tagsFromStored(loaded.tags, loaded.dives));
-      setGroupingConfig(defaultGroupingConfig(loaded.dives.length));
+      setGroupingConfig(defaultGroupingConfig());
     });
   }, []);
 
@@ -216,7 +216,6 @@ export default function App() {
       </header>
       <GroupingControls
         config={groupingConfig}
-        totalSeries={filteredData.seriesNames.length}
         onChange={setGroupingConfig}
       />
       {filterOptions && (
