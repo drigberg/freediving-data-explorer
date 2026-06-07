@@ -129,7 +129,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-02-08",
@@ -248,7 +252,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-02-14",
@@ -351,7 +359,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-02-22",
@@ -442,7 +454,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-03-21",
@@ -549,7 +565,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-03-27",
@@ -700,7 +720,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-04-04",
@@ -879,7 +903,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-04-08",
@@ -1038,7 +1066,11 @@
           0
         ]
       ],
-      "discipline": "Free Immersion"
+      "discipline": "Free Immersion",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 7
+      }
     },
     {
       "date": "2026-05-23",
@@ -1185,7 +1217,11 @@
           0
         ]
       ],
-      "discipline": "No-Fins"
+      "discipline": "No-Fins",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 5
+      }
     },
     {
       "date": "2026-05-25",
@@ -1328,7 +1364,11 @@
           0
         ]
       ],
-      "discipline": "Bi-Fins"
+      "discipline": "Bi-Fins",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 5
+      }
     },
     {
       "date": "2026-05-30",
@@ -1507,7 +1547,11 @@
           0
         ]
       ],
-      "discipline": "Bi-Fins"
+      "discipline": "Bi-Fins",
+      "exposureSuit": {
+        "openCell": true,
+        "thicknessMm": 5
+      }
     }
   ],
   "tags": []

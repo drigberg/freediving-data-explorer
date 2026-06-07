@@ -1,5 +1,4 @@
 - Allow grouping by "weight", "exposure suit", "discipline", and "has tag: (list of all other tags)"
-- Add a dropdown button to expand dives to show tags
 - All importing ALL dives, with option to auto-select the deepest or longest dive per session
 - Temperature
 - Ascent and descent speed graph

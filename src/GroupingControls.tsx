@@ -62,7 +62,15 @@ export default function GroupingControls({
       <div className="grouping-row">
         <span className="grouping-label">Group by</span>
         <SegmentButtons<GroupMode>
-          options={["none", "dateInterval", "n", "percentile", "discipline"]}
+          options={[
+            "none",
+            "dateInterval",
+            "n",
+            "percentile",
+            "discipline",
+            "weight",
+            "exposureSuit",
+          ]}
           value={config.groupMode}
           onChange={(groupMode) => update({ groupMode })}
           labels={{
@@ -71,6 +79,8 @@ export default function GroupingControls({
             n: "N",
             percentile: "Percentile",
             discipline: "Discipline",
+            weight: "Weight",
+            exposureSuit: "Exposure suit",
           }}
         />
       </div>

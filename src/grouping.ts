@@ -1,4 +1,4 @@
-import type { DiveData } from "./parseData";
+import type { DiveData, ExposureSuit } from "./parseData";
 
 // ── Types ──
 
@@ -7,7 +7,9 @@ export type GroupMode =
   | "dateInterval"
   | "n"
   | "percentile"
-  | "discipline";
+  | "discipline"
+  | "weight"
+  | "exposureSuit";
 export type DateIntervalUnit = "month" | "quarter" | "year";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
@@ -208,35 +210,82 @@ function groupByPercentile(
   return groups;
 }
 
-function groupByDiscipline(data: DiveData): Group[] {
+function groupByProperty(
+  data: DiveData,
+  getKey: (i: number) => string | undefined,
+  sortKeys: (keys: string[]) => string[],
+): Group[] {
   const buckets = new Map<string, number[]>();
-  const bucketOrder: string[] = [];
 
   for (let i = 0; i < data.seriesNames.length; i++) {
-    const discipline = data.disciplines[i];
-    if (!discipline) continue;
-    if (!buckets.has(discipline)) {
-      buckets.set(discipline, []);
-      bucketOrder.push(discipline);
-    }
-    buckets.get(discipline)!.push(i);
+    const key = getKey(i);
+    if (!key) continue;
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key)!.push(i);
   }
 
-  const untagged: number[] = [];
+  const unknown: number[] = [];
   for (let i = 0; i < data.seriesNames.length; i++) {
-    if (!data.disciplines[i]) untagged.push(i);
+    if (!getKey(i)) unknown.push(i);
   }
-  if (untagged.length > 0) {
-    bucketOrder.push("(Unknown)");
-    buckets.set("(Unknown)", untagged);
-  }
+  if (unknown.length > 0) buckets.set("(Unknown)", unknown);
 
-  return bucketOrder
+  const keys = sortKeys([...buckets.keys()]);
+  return keys
     .filter((key) => buckets.get(key)!.length > 0)
     .map((key) => ({
       label: key,
       indices: buckets.get(key)!.sort((a, b) => a - b),
     }));
+}
+
+function exposureSuitLabel(suit: ExposureSuit): string {
+  const cellType = suit.openCell ? "Open Cell" : "Closed Cell";
+  return `${cellType}, ${suit.thicknessMm}mm`;
+}
+
+function groupByDiscipline(data: DiveData): Group[] {
+  return groupByProperty(
+    data,
+    (i) => data.disciplines[i],
+    (keys) => {
+      const unknown = keys.filter((k) => k === "(Unknown)");
+      const known = keys.filter((k) => k !== "(Unknown)");
+      return [...known, ...unknown];
+    },
+  );
+}
+
+function groupByWeight(data: DiveData): Group[] {
+  return groupByProperty(
+    data,
+    (i) => {
+      const weight = data.weights[i];
+      return weight !== undefined ? `${weight}kg` : undefined;
+    },
+    (keys) => {
+      const unknown = keys.filter((k) => k === "(Unknown)");
+      const known = keys
+        .filter((k) => k !== "(Unknown)")
+        .sort((a, b) => parseFloat(a) - parseFloat(b));
+      return [...known, ...unknown];
+    },
+  );
+}
+
+function groupByExposureSuit(data: DiveData): Group[] {
+  return groupByProperty(
+    data,
+    (i) => {
+      const suit = data.exposureSuits[i];
+      return suit ? exposureSuitLabel(suit) : undefined;
+    },
+    (keys) => {
+      const unknown = keys.filter((k) => k === "(Unknown)");
+      const known = keys.filter((k) => k !== "(Unknown)").sort();
+      return [...known, ...unknown];
+    },
+  );
 }
 
 // ── Coalescing functions ──
@@ -342,6 +391,12 @@ export function processData(
       break;
     case "discipline":
       groups = groupByDiscipline(data);
+      break;
+    case "weight":
+      groups = groupByWeight(data);
+      break;
+    case "exposureSuit":
+      groups = groupByExposureSuit(data);
       break;
     default:
       groups = groupByNone(data);

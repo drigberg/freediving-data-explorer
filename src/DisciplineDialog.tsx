@@ -17,7 +17,7 @@ export default function DisciplineDialog({
         <button type="button" className="dialog-back-btn" onClick={onBack}>
           Back
         </button>
-        <h3>Assign Discipline</h3>
+        <h3>Select Discipline</h3>
         <div className="tag-form">
           <div className="tag-form-row discipline-options">
             {DISCIPLINES.map((d) => (

@@ -1,4 +1,4 @@
-import type { DiveData } from "./parseData";
+import type { DiveData, ExposureSuit } from "./parseData";
 import { extractDateKey, parseCsvString } from "./parseData";
 import type { Tag } from "./grouping";
 
@@ -7,6 +7,9 @@ export interface StoredDive {
   label: string;
   profile: [number, number][];
   discipline?: string;
+  weightKg?: number;
+  safety?: boolean;
+  exposureSuit?: ExposureSuit;
 }
 
 export interface StoredTag {
@@ -26,28 +29,67 @@ export function emptyStore(): DiveStore {
   return { dives: [], tags: [] };
 }
 
-function migrateDisciplineTags(store: DiveStore): DiveStore {
-  const disciplineTags = store.tags.filter((t) =>
-    t.name.startsWith("Discipline:")
+function migrateLegacyTags(store: DiveStore): DiveStore {
+  const legacyPrefixes = [
+    "Discipline:",
+    "Weight:",
+    "Safety:",
+    "Exposure Suit:",
+  ];
+  const legacyTags = store.tags.filter((t) =>
+    legacyPrefixes.some((p) => t.name.startsWith(p))
   );
-  if (disciplineTags.length === 0) return store;
+  if (legacyTags.length === 0) return store;
 
   const dives = store.dives.map((d) => ({ ...d }));
   const dateToIndex = new Map(dives.map((d, i) => [d.date, i]));
 
-  for (const tag of disciplineTags) {
-    const discipline = tag.name.replace(/^Discipline:\s*/, "");
+  for (const tag of legacyTags) {
     for (const date of tag.diveDates) {
       const idx = dateToIndex.get(date);
-      if (idx !== undefined && !dives[idx].discipline) {
-        dives[idx] = { ...dives[idx], discipline };
+      if (idx === undefined) continue;
+      const dive = dives[idx];
+
+      if (tag.name.startsWith("Discipline:") && !dive.discipline) {
+        dives[idx] = {
+          ...dive,
+          discipline: tag.name.replace(/^Discipline:\s*/, ""),
+        };
+      } else if (tag.name.startsWith("Weight:") && dive.weightKg === undefined) {
+        const match = tag.name.match(/^Weight:\s*([\d.]+)kg$/);
+        if (match) {
+          dives[idx] = { ...dive, weightKg: parseFloat(match[1]) };
+        }
+      } else if (tag.name.startsWith("Safety:") && dive.safety === undefined) {
+        const value = tag.name.replace(/^Safety:\s*/, "");
+        if (value === "Yes" || value === "No") {
+          dives[idx] = { ...dive, safety: value === "Yes" };
+        }
+      } else if (
+        tag.name.startsWith("Exposure Suit:") &&
+        dive.exposureSuit === undefined
+      ) {
+        const match = tag.name.match(
+          /^Exposure Suit:\s*(Open Cell|Closed Cell),\s*([\d.]+)mm$/
+        );
+        if (match) {
+          dives[idx] = {
+            ...dive,
+            exposureSuit: {
+              openCell: match[1] === "Open Cell",
+              thicknessMm: parseFloat(match[2]),
+            },
+          };
+        }
       }
     }
   }
 
   return {
     dives,
-    tags: store.tags.filter((t) => !t.name.startsWith("Discipline:")),
+    tags: store.tags.filter(
+      (t) => !legacyPrefixes.some((p) => t.name.startsWith(p))
+    ),
   };
 }
 
@@ -57,6 +99,9 @@ export function diveDataFromStore(store: DiveStore): DiveData {
     seriesNames: sorted.map((d) => d.label),
     seriesData: sorted.map((d) => d.profile),
     disciplines: sorted.map((d) => d.discipline),
+    weights: sorted.map((d) => d.weightKg),
+    safeties: sorted.map((d) => d.safety),
+    exposureSuits: sorted.map((d) => d.exposureSuit),
   };
 }
 
@@ -162,13 +207,15 @@ export async function loadStore(): Promise<DiveStore> {
     store = readFromLocalStorage() ?? emptyStore();
   }
 
-  const hadDisciplineTags = store.tags.some((t) =>
-    t.name.startsWith("Discipline:")
+  const hadLegacyTags = store.tags.some((t) =>
+    ["Discipline:", "Weight:", "Safety:", "Exposure Suit:"].some((p) =>
+      t.name.startsWith(p)
+    )
   );
-  const migrated = migrateDisciplineTags(store);
+  const migrated = migrateLegacyTags(store);
   writeToLocalStorage(migrated);
 
-  if (hadDisciplineTags) {
+  if (hadLegacyTags) {
     try {
       await fetch(API_URL, {
         method: "PUT",
@@ -183,24 +230,78 @@ export async function loadStore(): Promise<DiveStore> {
   return migrated;
 }
 
+function datesFromIndices(
+  store: DiveStore,
+  diveIndices: number[]
+): Set<string> {
+  const data = diveDataFromStore(store);
+  return new Set(
+    diveIndices
+      .map((i) => extractDateKey(data.seriesNames[i]))
+      .filter((d): d is string => d !== null)
+  );
+}
+
 export function setDiveDisciplines(
   store: DiveStore,
   diveIndices: number[],
   discipline: string
 ): DiveStore {
-  const data = diveDataFromStore(store);
-  const datesToUpdate = new Set(
-    diveIndices
-      .map((i) => extractDateKey(data.seriesNames[i]))
-      .filter((d): d is string => d !== null)
-  );
-
+  const datesToUpdate = datesFromIndices(store, diveIndices);
   if (datesToUpdate.size === 0) return store;
 
   return {
     ...store,
     dives: store.dives.map((d) =>
       datesToUpdate.has(d.date) ? { ...d, discipline } : d
+    ),
+  };
+}
+
+export function setDiveWeights(
+  store: DiveStore,
+  diveIndices: number[],
+  weightKg: number
+): DiveStore {
+  const datesToUpdate = datesFromIndices(store, diveIndices);
+  if (datesToUpdate.size === 0) return store;
+
+  return {
+    ...store,
+    dives: store.dives.map((d) =>
+      datesToUpdate.has(d.date) ? { ...d, weightKg } : d
+    ),
+  };
+}
+
+export function setDiveSafeties(
+  store: DiveStore,
+  diveIndices: number[],
+  safety: boolean
+): DiveStore {
+  const datesToUpdate = datesFromIndices(store, diveIndices);
+  if (datesToUpdate.size === 0) return store;
+
+  return {
+    ...store,
+    dives: store.dives.map((d) =>
+      datesToUpdate.has(d.date) ? { ...d, safety } : d
+    ),
+  };
+}
+
+export function setDiveExposureSuits(
+  store: DiveStore,
+  diveIndices: number[],
+  exposureSuit: ExposureSuit
+): DiveStore {
+  const datesToUpdate = datesFromIndices(store, diveIndices);
+  if (datesToUpdate.size === 0) return store;
+
+  return {
+    ...store,
+    dives: store.dives.map((d) =>
+      datesToUpdate.has(d.date) ? { ...d, exposureSuit } : d
     ),
   };
 }

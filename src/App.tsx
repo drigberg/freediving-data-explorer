@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DiveData } from "./parseData";
+import type { DiveData, ExposureSuit } from "./parseData";
 import {
   defaultGroupingConfig,
   processData,
@@ -12,6 +12,9 @@ import {
   mergeCsvIntoStore,
   saveStore,
   setDiveDisciplines,
+  setDiveExposureSuits,
+  setDiveSafeties,
+  setDiveWeights,
   tagsFromStored,
   tagsToStored,
   type DiveStore,
@@ -84,6 +87,42 @@ export default function App() {
     []
   );
 
+  const handleWeightAssign = useCallback(
+    (indices: number[], weightKg: number) => {
+      setStore((prev) => {
+        if (!prev) return prev;
+        const updated = setDiveWeights(prev, indices, weightKg);
+        saveStore(updated);
+        return updated;
+      });
+    },
+    []
+  );
+
+  const handleSafetyAssign = useCallback(
+    (indices: number[], safety: boolean) => {
+      setStore((prev) => {
+        if (!prev) return prev;
+        const updated = setDiveSafeties(prev, indices, safety);
+        saveStore(updated);
+        return updated;
+      });
+    },
+    []
+  );
+
+  const handleExposureSuitAssign = useCallback(
+    (indices: number[], exposureSuit: ExposureSuit) => {
+      setStore((prev) => {
+        if (!prev) return prev;
+        const updated = setDiveExposureSuits(prev, indices, exposureSuit);
+        saveStore(updated);
+        return updated;
+      });
+    },
+    []
+  );
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -120,6 +159,9 @@ export default function App() {
           seriesNames: [],
           seriesData: [],
           disciplines: [],
+          weights: [],
+          safeties: [],
+          exposureSuits: [],
         } as DiveData,
       };
     }
@@ -127,6 +169,9 @@ export default function App() {
     const seriesNames: string[] = [];
     const seriesData: [number, number][][] = [];
     const disciplines: (string | undefined)[] = [];
+    const weights: (number | undefined)[] = [];
+    const safeties: (boolean | undefined)[] = [];
+    const exposureSuits: (ExposureSuit | undefined)[] = [];
     const originalToFiltered = new Map<number, number>();
     for (let i = 0; i < data.seriesNames.length; i++) {
       if (!hiddenDives.has(i)) {
@@ -134,10 +179,20 @@ export default function App() {
         seriesNames.push(data.seriesNames[i]);
         seriesData.push(data.seriesData[i]);
         disciplines.push(data.disciplines[i]);
+        weights.push(data.weights[i]);
+        safeties.push(data.safeties[i]);
+        exposureSuits.push(data.exposureSuits[i]);
       }
     }
     return {
-      filteredData: { seriesNames, seriesData, disciplines } as DiveData,
+      filteredData: {
+        seriesNames,
+        seriesData,
+        disciplines,
+        weights,
+        safeties,
+        exposureSuits,
+      } as DiveData,
     };
   }, [data, hiddenDives]);
 
@@ -197,11 +252,17 @@ export default function App() {
           seriesNames={data.seriesNames}
           seriesData={data.seriesData}
           disciplines={data.disciplines}
+          weights={data.weights}
+          safeties={data.safeties}
+          exposureSuits={data.exposureSuits}
           hiddenDives={hiddenDives}
           onToggleVisibility={toggleVisibility}
           tags={tags}
           onTagsChange={handleTagsChange}
           onDisciplinesAssign={handleDisciplinesAssign}
+          onWeightAssign={handleWeightAssign}
+          onSafetyAssign={handleSafetyAssign}
+          onExposureSuitAssign={handleExposureSuitAssign}
         />
         <main className="app-main">
           {mode === "2d" ? (

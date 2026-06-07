@@ -466,6 +466,8 @@ body,
 }
 
 .tag-dialog {
+  display: flex;
+  flex-direction: column;
   background: #161b22;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -477,7 +479,7 @@ body,
 }
 
 .dialog-back-btn {
-  display: block;
+  align-self: flex-end;
   margin-bottom: 8px;
   padding: 0;
   background: none;

@@ -2,19 +2,59 @@ import { useState, useCallback, useRef, useMemo } from "react";
 import { shortDateLabel } from "./colors";
 import TagDialog from "./TagDialog";
 import DisciplineDialog from "./DisciplineDialog";
+import WeightDialog from "./WeightDialog";
+import SafetyDialog from "./SafetyDialog";
+import ExposureSuitDialog from "./ExposureSuitDialog";
 import EditDialog from "./AddTagDialog";
 import { disciplineAbbrev } from "./disciplines";
+import type { ExposureSuit } from "./parseData";
 import type { Tag } from "./grouping";
 
 interface SidebarProps {
   seriesNames: string[];
   seriesData: [number, number][][];
   disciplines: (string | undefined)[];
+  weights: (number | undefined)[];
+  safeties: (boolean | undefined)[];
+  exposureSuits: (ExposureSuit | undefined)[];
   hiddenDives: Set<number>;
   onToggleVisibility: (index: number) => void;
   tags: Tag[];
   onTagsChange: (tags: Tag[]) => void;
   onDisciplinesAssign: (indices: number[], discipline: string) => void;
+  onWeightAssign: (indices: number[], weightKg: number) => void;
+  onSafetyAssign: (indices: number[], safety: boolean) => void;
+  onExposureSuitAssign: (indices: number[], suit: ExposureSuit) => void;
+}
+
+type AssignMode =
+  | { kind: "tag"; name: string }
+  | { kind: "discipline"; value: string }
+  | { kind: "weight"; value: number }
+  | { kind: "safety"; value: boolean }
+  | { kind: "exposureSuit"; value: ExposureSuit };
+
+function formatExposureSuit(suit: ExposureSuit): string {
+  const cellType = suit.openCell ? "Open Cell" : "Closed Cell";
+  return `${cellType}, ${suit.thicknessMm}mm`;
+}
+
+function assignModeDescription(mode: AssignMode): { action: string; label: string } {
+  switch (mode.kind) {
+    case "tag":
+      return { action: "tag with", label: mode.name };
+    case "discipline":
+      return { action: "assign discipline", label: mode.value };
+    case "weight":
+      return { action: "assign weight", label: `${mode.value}kg` };
+    case "safety":
+      return { action: "assign safety", label: mode.value ? "Yes" : "No" };
+    case "exposureSuit":
+      return {
+        action: "assign exposure suit",
+        label: formatExposureSuit(mode.value),
+      };
+  }
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -84,15 +124,24 @@ export default function Sidebar({
   seriesNames,
   seriesData,
   disciplines,
+  weights,
+  safeties,
+  exposureSuits,
   hiddenDives,
   onToggleVisibility,
   tags,
   onTagsChange,
   onDisciplinesAssign,
+  onWeightAssign,
+  onSafetyAssign,
+  onExposureSuitAssign,
 }: SidebarProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
   const [showDisciplineDialog, setShowDisciplineDialog] = useState(false);
+  const [showWeightDialog, setShowWeightDialog] = useState(false);
+  const [showSafetyDialog, setShowSafetyDialog] = useState(false);
+  const [showExposureSuitDialog, setShowExposureSuitDialog] = useState(false);
   const [expandedDives, setExpandedDives] = useState<Set<number>>(new Set());
 
   const toggleExpanded = useCallback((index: number) => {
@@ -107,76 +156,87 @@ export default function Sidebar({
     });
   }, []);
 
-  const [taggingMode, setTaggingMode] = useState<string | null>(null);
-  const [disciplineAssignMode, setDisciplineAssignMode] = useState<
-    string | null
-  >(null);
+  const [assignMode, setAssignMode] = useState<AssignMode | null>(null);
   const [selection, setSelection] = useState<Set<number>>(new Set());
   const lastClickedRef = useRef<number | null>(null);
 
-  const inSelectMode = taggingMode !== null || disciplineAssignMode !== null;
+  const inSelectMode = assignMode !== null;
+
+  const startAssignMode = useCallback((mode: AssignMode) => {
+    setAssignMode(mode);
+    setSelection(new Set());
+    lastClickedRef.current = null;
+  }, []);
 
   const handleCreateTag = useCallback(
     (name: string) => {
       const existing = tags.find((t) => t.name === name);
       if (existing) {
-        setTaggingMode(name);
+        startAssignMode({ kind: "tag", name });
         setSelection(new Set(existing.diveIndices));
       } else {
         onTagsChange([...tags, { name, diveIndices: new Set() }]);
-        setTaggingMode(name);
-        setSelection(new Set());
+        startAssignMode({ kind: "tag", name });
       }
       setShowTagDialog(false);
     },
-    [tags, onTagsChange],
+    [tags, onTagsChange, startAssignMode],
   );
 
   const handleSelectTag = useCallback(
     (name: string) => {
       const tag = tags.find((t) => t.name === name);
-      setTaggingMode(name);
+      startAssignMode({ kind: "tag", name });
       setSelection(new Set(tag?.diveIndices ?? []));
       setShowTagDialog(false);
     },
-    [tags],
+    [tags, startAssignMode],
   );
 
-  const handleSelectDiscipline = useCallback((discipline: string) => {
-    setDisciplineAssignMode(discipline);
-    setSelection(new Set());
-    setShowDisciplineDialog(false);
-    lastClickedRef.current = null;
-  }, []);
-
   const handleDone = useCallback(() => {
-    if (taggingMode) {
-      onTagsChange(
-        tags.map((t) =>
-          t.name === taggingMode
-            ? { ...t, diveIndices: new Set(selection) }
-            : t,
-        ),
-      );
-      setTaggingMode(null);
-    } else if (disciplineAssignMode) {
-      onDisciplinesAssign([...selection], disciplineAssignMode);
-      setDisciplineAssignMode(null);
+    if (!assignMode) return;
+
+    const indices = [...selection];
+    switch (assignMode.kind) {
+      case "tag":
+        onTagsChange(
+          tags.map((t) =>
+            t.name === assignMode.name
+              ? { ...t, diveIndices: new Set(selection) }
+              : t,
+          ),
+        );
+        break;
+      case "discipline":
+        onDisciplinesAssign(indices, assignMode.value);
+        break;
+      case "weight":
+        onWeightAssign(indices, assignMode.value);
+        break;
+      case "safety":
+        onSafetyAssign(indices, assignMode.value);
+        break;
+      case "exposureSuit":
+        onExposureSuitAssign(indices, assignMode.value);
+        break;
     }
+
+    setAssignMode(null);
     setSelection(new Set());
     lastClickedRef.current = null;
   }, [
-    taggingMode,
-    disciplineAssignMode,
+    assignMode,
     selection,
     tags,
     onTagsChange,
     onDisciplinesAssign,
+    onWeightAssign,
+    onSafetyAssign,
+    onExposureSuitAssign,
   ]);
 
   const handleCancel = useCallback(() => {
-    setTaggingMode(null);
-    setDisciplineAssignMode(null);
+    setAssignMode(null);
     setSelection(new Set());
     lastClickedRef.current = null;
   }, []);
@@ -216,6 +276,10 @@ export default function Sidebar({
     [],
   );
 
+  const backToEdit = useCallback(() => {
+    setShowEditDialog(true);
+  }, []);
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -229,27 +293,11 @@ export default function Sidebar({
         </button>
       </div>
 
-      {taggingMode && (
+      {assignMode && (
         <div className="sidebar-tag-banner">
           <span>
-            Select dives to tag with <strong>{taggingMode}</strong>
-          </span>
-          <div className="sidebar-tag-actions">
-            <button className="tag-action-btn done" onClick={handleDone}>
-              Done
-            </button>
-            <button className="tag-action-btn cancel" onClick={handleCancel}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {disciplineAssignMode && (
-        <div className="sidebar-tag-banner">
-          <span>
-            Select dives to assign discipline{" "}
-            <strong>{disciplineAssignMode}</strong>
+            Select dives to {assignModeDescription(assignMode).action}{" "}
+            <strong>{assignModeDescription(assignMode).label}</strong>
           </span>
           <div className="sidebar-tag-actions">
             <button className="tag-action-btn done" onClick={handleDone}>
@@ -294,6 +342,9 @@ export default function Sidebar({
             points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
           const duration =
             points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
+          const weight = weights[i];
+          const safety = safeties[i];
+          const exposureSuit = exposureSuits[i];
 
           return (
             <li
@@ -339,6 +390,19 @@ export default function Sidebar({
                       Discipline: {discipline}
                     </li>
                   )}
+                  {weight !== undefined && (
+                    <li className="dive-detail-item">Weight: {weight}kg</li>
+                  )}
+                  {safety !== undefined && (
+                    <li className="dive-detail-item">
+                      Safety: {safety ? "Yes" : "No"}
+                    </li>
+                  )}
+                  {exposureSuit && (
+                    <li className="dive-detail-item">
+                      Exposure Suit: {formatExposureSuit(exposureSuit)}
+                    </li>
+                  )}
                   {diveTags.map((tagName) => (
                     <li key={tagName} className="dive-detail-item">
                       {tagName}
@@ -357,7 +421,19 @@ export default function Sidebar({
             setShowEditDialog(false);
             setShowDisciplineDialog(true);
           }}
-          onAddTag={() => {
+          onAssignWeight={() => {
+            setShowEditDialog(false);
+            setShowWeightDialog(true);
+          }}
+          onAssignSafety={() => {
+            setShowEditDialog(false);
+            setShowSafetyDialog(true);
+          }}
+          onAssignExposureSuit={() => {
+            setShowEditDialog(false);
+            setShowExposureSuitDialog(true);
+          }}
+          onOther={() => {
             setShowEditDialog(false);
             setShowTagDialog(true);
           }}
@@ -376,18 +452,63 @@ export default function Sidebar({
           onClose={() => setShowTagDialog(false)}
           onBack={() => {
             setShowTagDialog(false);
-            setShowEditDialog(true);
+            backToEdit();
           }}
         />
       )}
 
       {showDisciplineDialog && (
         <DisciplineDialog
-          onSelect={handleSelectDiscipline}
+          onSelect={(discipline) => {
+            startAssignMode({ kind: "discipline", value: discipline });
+            setShowDisciplineDialog(false);
+          }}
           onClose={() => setShowDisciplineDialog(false)}
           onBack={() => {
             setShowDisciplineDialog(false);
-            setShowEditDialog(true);
+            backToEdit();
+          }}
+        />
+      )}
+
+      {showWeightDialog && (
+        <WeightDialog
+          onApply={(weightKg) => {
+            startAssignMode({ kind: "weight", value: weightKg });
+            setShowWeightDialog(false);
+          }}
+          onClose={() => setShowWeightDialog(false)}
+          onBack={() => {
+            setShowWeightDialog(false);
+            backToEdit();
+          }}
+        />
+      )}
+
+      {showSafetyDialog && (
+        <SafetyDialog
+          onSelect={(safety) => {
+            startAssignMode({ kind: "safety", value: safety });
+            setShowSafetyDialog(false);
+          }}
+          onClose={() => setShowSafetyDialog(false)}
+          onBack={() => {
+            setShowSafetyDialog(false);
+            backToEdit();
+          }}
+        />
+      )}
+
+      {showExposureSuitDialog && (
+        <ExposureSuitDialog
+          onApply={(suit) => {
+            startAssignMode({ kind: "exposureSuit", value: suit });
+            setShowExposureSuitDialog(false);
+          }}
+          onClose={() => setShowExposureSuitDialog(false)}
+          onBack={() => {
+            setShowExposureSuitDialog(false);
+            backToEdit();
           }}
         />
       )}

@@ -1,9 +1,17 @@
 import Papa from "papaparse";
 
+export interface ExposureSuit {
+  openCell: boolean;
+  thicknessMm: number;
+}
+
 export interface DiveData {
   seriesNames: string[];
   seriesData: [number, number][][];
   disciplines: (string | undefined)[];
+  weights: (number | undefined)[];
+  safeties: (boolean | undefined)[];
+  exposureSuits: (ExposureSuit | undefined)[];
 }
 
 const TIME_STEP = 2;
@@ -49,5 +57,8 @@ export function parseCsvString(csv: string): DiveData {
     seriesNames,
     seriesData: seriesData.map(ensureTrailingZero),
     disciplines: seriesNames.map(() => undefined),
+    weights: seriesNames.map(() => undefined),
+    safeties: seriesNames.map(() => undefined),
+    exposureSuits: seriesNames.map(() => undefined),
   };
 }
