@@ -1,16 +1,22 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { shortDateLabel } from "./colors";
 import TagDialog from "./TagDialog";
 
-interface Tag {
-  name: string;
-  diveIndices: Set<number>;
-}
+import type { Tag } from "./grouping";
+
+const DISCIPLINE_ABBREV: Record<string, string> = {
+  "Free Immersion": "FI",
+  "No-Fins": "CNF",
+  "Bi-Fins": "CWTB",
+  "Mono-Fin": "CWT",
+};
 
 interface SidebarProps {
   seriesNames: string[];
   hiddenDives: Set<number>;
   onToggleVisibility: (index: number) => void;
+  tags: Tag[];
+  onTagsChange: (tags: Tag[]) => void;
 }
 
 function EyeIcon({ open }: { open: boolean }) {
@@ -35,8 +41,9 @@ export default function Sidebar({
   seriesNames,
   hiddenDives,
   onToggleVisibility,
+  tags,
+  onTagsChange,
 }: SidebarProps) {
-  const [tags, setTags] = useState<Tag[]>([]);
   const [showTagDialog, setShowTagDialog] = useState(false);
 
   const [taggingMode, setTaggingMode] = useState<string | null>(null);
@@ -50,13 +57,13 @@ export default function Sidebar({
         setTaggingMode(name);
         setTagSelection(new Set(existing.diveIndices));
       } else {
-        setTags((prev) => [...prev, { name, diveIndices: new Set() }]);
+        onTagsChange([...tags, { name, diveIndices: new Set() }]);
         setTaggingMode(name);
         setTagSelection(new Set());
       }
       setShowTagDialog(false);
     },
-    [tags]
+    [tags, onTagsChange]
   );
 
   const handleSelectTag = useCallback((name: string) => {
@@ -68,21 +75,35 @@ export default function Sidebar({
 
   const handleTagDone = useCallback(() => {
     if (!taggingMode) return;
-    setTags((prev) =>
-      prev.map((t) =>
+    onTagsChange(
+      tags.map((t) =>
         t.name === taggingMode ? { ...t, diveIndices: new Set(tagSelection) } : t
       )
     );
     setTaggingMode(null);
     setTagSelection(new Set());
     lastClickedRef.current = null;
-  }, [taggingMode, tagSelection]);
+  }, [taggingMode, tagSelection, tags, onTagsChange]);
 
   const handleTagCancel = useCallback(() => {
     setTaggingMode(null);
     setTagSelection(new Set());
     lastClickedRef.current = null;
   }, []);
+
+  const disciplineByDive = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const tag of tags) {
+      const match = tag.name.match(/^Discipline:\s*(.+)$/);
+      if (!match) continue;
+      const abbrev = DISCIPLINE_ABBREV[match[1]];
+      if (!abbrev) continue;
+      for (const idx of tag.diveIndices) {
+        map.set(idx, abbrev);
+      }
+    }
+    return map;
+  }, [tags]);
 
   const handleTagClick = useCallback(
     (index: number, shiftKey: boolean) => {
@@ -143,6 +164,8 @@ export default function Sidebar({
           const isHidden = hiddenDives.has(i);
           const isSelected = tagSelection.has(i);
 
+          const abbrev = disciplineByDive.get(i);
+
           if (taggingMode) {
             return (
               <li
@@ -152,6 +175,7 @@ export default function Sidebar({
               >
                 <span className="tag-checkbox">{isSelected ? "✓" : ""}</span>
                 <span className="dive-name">{shortDateLabel(name)}</span>
+                {abbrev && <span className="dive-discipline">{abbrev}</span>}
               </li>
             );
           }
@@ -166,6 +190,7 @@ export default function Sidebar({
                 <EyeIcon open={!isHidden} />
               </button>
               <span className="dive-name">{shortDateLabel(name)}</span>
+              {abbrev && <span className="dive-discipline">{abbrev}</span>}
             </li>
           );
         })}

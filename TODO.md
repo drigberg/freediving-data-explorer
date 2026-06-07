@@ -1,4 +1,4 @@
-- Add a dropdown button to expand dives to show filters
+- Add a dropdown button to expand dives to show tags
 - Allow grouping by "weight", "exposure suit", "discipline", and "has tag: (list of all other tags)"
 - All importing ALL dives, with option to auto-select the deepest or longest dive per session
 - Temperature

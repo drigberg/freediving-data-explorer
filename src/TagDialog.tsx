@@ -199,7 +199,10 @@ export default function TagDialog({
             onClick={handleCreate}
             disabled={!canCreate}
           >
-            Create {tagName ? `"${tagName}"` : ""}
+            {existingTags.some((tag) => tag.name === tagName)
+              ? "Select"
+              : "Create"}{" "}
+            {tagName ? `"${tagName}"` : ""}
           </button>
         )}
 

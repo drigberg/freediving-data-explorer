@@ -351,6 +351,18 @@ body,
   text-overflow: ellipsis;
 }
 
+.dive-discipline {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
 /* ── Tag dialog ── */
 
 .tag-dialog-overlay {

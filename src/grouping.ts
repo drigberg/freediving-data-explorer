@@ -2,7 +2,7 @@ import type { DiveData } from "./parseData";
 
 // ── Types ──
 
-export type GroupMode = "none" | "dateInterval" | "n" | "percentile";
+export type GroupMode = "none" | "dateInterval" | "n" | "percentile" | "discipline";
 export type DateIntervalUnit = "month" | "quarter" | "year";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
@@ -17,6 +17,11 @@ export interface GroupingConfig {
   percentileValue: number;
   displayMode: DisplayMode;
   maximumCriterion: RankCriterion;
+}
+
+export interface Tag {
+  name: string;
+  diveIndices: Set<number>;
 }
 
 export interface ProcessedSeries {
@@ -190,6 +195,46 @@ function groupByPercentile(
   return groups;
 }
 
+function groupByDiscipline(
+  data: DiveData,
+  tags: Tag[]
+): Group[] {
+  const disciplineTags = tags.filter((t) => t.name.startsWith("Discipline:"));
+  const buckets = new Map<string, number[]>();
+  const bucketOrder: string[] = [];
+  const assigned = new Set<number>();
+
+  for (const tag of disciplineTags) {
+    const discipline = tag.name.replace(/^Discipline:\s*/, "");
+    if (!buckets.has(discipline)) {
+      buckets.set(discipline, []);
+      bucketOrder.push(discipline);
+    }
+    for (const idx of tag.diveIndices) {
+      if (idx < data.seriesNames.length && !assigned.has(idx)) {
+        buckets.get(discipline)!.push(idx);
+        assigned.add(idx);
+      }
+    }
+  }
+
+  const untagged: number[] = [];
+  for (let i = 0; i < data.seriesNames.length; i++) {
+    if (!assigned.has(i)) untagged.push(i);
+  }
+  if (untagged.length > 0) {
+    bucketOrder.push("Untagged");
+    buckets.set("Untagged", untagged);
+  }
+
+  return bucketOrder
+    .filter((key) => buckets.get(key)!.length > 0)
+    .map((key) => ({
+      label: key,
+      indices: buckets.get(key)!.sort((a, b) => a - b),
+    }));
+}
+
 // ── Coalescing functions ──
 
 function coalesceAverage(
@@ -265,7 +310,8 @@ function ensureTrailingZero(points: [number, number][]): [number, number][] {
 
 export function processData(
   data: DiveData,
-  config: GroupingConfig
+  config: GroupingConfig,
+  tags: Tag[] = []
 ): ProcessedData {
   if (config.groupMode === "none") {
     return {
@@ -290,6 +336,9 @@ export function processData(
         config.percentileCriterion,
         config.percentileValue
       );
+      break;
+    case "discipline":
+      groups = groupByDiscipline(data, tags);
       break;
     default:
       groups = groupByNone(data);

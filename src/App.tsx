@@ -5,6 +5,7 @@ import {
   defaultGroupingConfig,
   processData,
   type GroupingConfig,
+  type Tag,
 } from "./grouping";
 import GroupingControls from "./GroupingControls";
 import Sidebar from "./Sidebar";
@@ -17,6 +18,7 @@ export default function App() {
   const data = useMemo(() => parseDiveData(), []);
   const [mode, setMode] = useState<ViewMode>("2d");
   const [hiddenDives, setHiddenDives] = useState<Set<number>>(new Set());
+  const [tags, setTags] = useState<Tag[]>([]);
   const [groupingConfig, setGroupingConfig] = useState<GroupingConfig>(() =>
     defaultGroupingConfig(data.seriesNames.length)
   );
@@ -33,21 +35,34 @@ export default function App() {
     });
   }, []);
 
-  const filteredData = useMemo<DiveData>(() => {
+  const { filteredData, filteredTags } = useMemo(() => {
     const seriesNames: string[] = [];
     const seriesData: [number, number][][] = [];
+    const originalToFiltered = new Map<number, number>();
     for (let i = 0; i < data.seriesNames.length; i++) {
       if (!hiddenDives.has(i)) {
+        originalToFiltered.set(i, seriesNames.length);
         seriesNames.push(data.seriesNames[i]);
         seriesData.push(data.seriesData[i]);
       }
     }
-    return { seriesNames, seriesData };
-  }, [data, hiddenDives]);
+    const remappedTags: Tag[] = tags.map((t) => {
+      const newIndices = new Set<number>();
+      for (const idx of t.diveIndices) {
+        const mapped = originalToFiltered.get(idx);
+        if (mapped !== undefined) newIndices.add(mapped);
+      }
+      return { name: t.name, diveIndices: newIndices };
+    });
+    return {
+      filteredData: { seriesNames, seriesData } as DiveData,
+      filteredTags: remappedTags,
+    };
+  }, [data, hiddenDives, tags]);
 
   const processed = useMemo(
-    () => processData(filteredData, groupingConfig),
-    [filteredData, groupingConfig]
+    () => processData(filteredData, groupingConfig, filteredTags),
+    [filteredData, groupingConfig, filteredTags]
   );
 
   return (
@@ -79,6 +94,8 @@ export default function App() {
           seriesNames={data.seriesNames}
           hiddenDives={hiddenDives}
           onToggleVisibility={toggleVisibility}
+          tags={tags}
+          onTagsChange={setTags}
         />
         <main className="app-main">
           {mode === "2d" ? (
