@@ -37,7 +37,10 @@ type AssignMode =
   | { kind: "safety"; value: boolean }
   | { kind: "exposureSuit"; value: ExposureSuit };
 
-function assignModeDescription(mode: AssignMode): { action: string; label: string } {
+function assignModeDescription(mode: AssignMode): {
+  action: string;
+  label: string;
+} {
   switch (mode.kind) {
     case "tag":
       return { action: "tag with", label: mode.name };
@@ -348,107 +351,106 @@ export default function Sidebar({
           <Fragment key={group.year}>
             <li className="sidebar-year-header">{group.year}</li>
             {group.indices.map((i) => {
-          const name = seriesNames[i];
-          const isHidden = hiddenDives.has(i);
-          const isSelected = selection.has(i);
-          const discipline = disciplines[i];
+              const name = seriesNames[i];
+              const isHidden = hiddenDives.has(i);
+              const isSelected = selection.has(i);
+              const discipline = disciplines[i];
 
-          if (inSelectMode) {
-            return (
-              <li
-                key={i}
-                className={`sidebar-dive-item tagging ${isSelected ? "selected" : ""}`}
-                onClick={(e) => handleSelectionClick(i, e.shiftKey)}
-              >
-                <span className="tag-checkbox">{isSelected ? "✓" : ""}</span>
-                <span className="dive-name">{shortDateLabel(name)}</span>
-                {discipline && (
-                  <span className="dive-discipline">
-                    {disciplineAbbrev(discipline)}
-                  </span>
-                )}
-              </li>
-            );
-          }
-
-          const diveTags = tagsByDive.get(i) ?? [];
-          const isExpanded = expandedDives.has(i);
-          const points = seriesData[i];
-          const maxDepth =
-            points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
-          const duration =
-            points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
-          const weight = weights[i];
-          const safety = safeties[i];
-          const exposureSuit = exposureSuits[i];
-
-          return (
-            <li
-              key={i}
-              className={`sidebar-dive-entry ${isExpanded ? "expanded" : ""}`}
-            >
-              <div className="sidebar-dive-item">
-                <button
-                  className={`visibility-toggle ${isHidden ? "hidden-dive" : ""}`}
-                  onClick={() => onToggleVisibility(i)}
-                  title={isHidden ? "Show dive" : "Hide dive"}
-                >
-                  <EyeIcon open={!isHidden} />
-                </button>
-                <span
-                  className="dive-name clickable"
-                  onClick={() => toggleExpanded(i)}
-                >
-                  {shortDateLabel(name)}
-                </span>
-                {discipline && (
-                  <span className="dive-discipline">
-                    {disciplineAbbrev(discipline)}
-                  </span>
-                )}
-                <span
-                  className="dive-chevron"
-                  onClick={() => toggleExpanded(i)}
-                >
-                  <ChevronIcon open={isExpanded} />
-                </span>
-              </div>
-              {isExpanded && (
-                <ul className="dive-details">
-                  <li className="dive-detail-item">
-                    Max depth: {maxDepth.toFixed(1)}m
+              if (inSelectMode) {
+                return (
+                  <li
+                    key={i}
+                    className={`sidebar-dive-item tagging ${isSelected ? "selected" : ""}`}
+                    onClick={(e) => handleSelectionClick(i, e.shiftKey)}
+                  >
+                    <span className="tag-checkbox">
+                      {isSelected ? "✓" : ""}
+                    </span>
+                    <span className="dive-name">{shortDateLabel(name)}</span>
+                    {discipline && (
+                      <span className="dive-discipline">
+                        {disciplineAbbrev(discipline)}
+                      </span>
+                    )}
                   </li>
-                  <li className="dive-detail-item">
-                    Duration: {formatDuration(duration)}
-                  </li>
-                  {discipline && (
-                    <li className="dive-detail-item">
-                      Discipline: {discipline}
-                    </li>
+                );
+              }
+
+              const diveTags = tagsByDive.get(i) ?? [];
+              const isExpanded = expandedDives.has(i);
+              const points = seriesData[i];
+              const maxDepth =
+                points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
+              const duration =
+                points.length > 0
+                  ? points[points.length - 1][0] - points[0][0]
+                  : 0;
+              const weight = weights[i];
+              const safety = safeties[i];
+              const exposureSuit = exposureSuits[i];
+
+              return (
+                <li
+                  key={i}
+                  className={`sidebar-dive-entry ${isExpanded ? "expanded" : ""}`}
+                >
+                  <div className="sidebar-dive-item">
+                    <button
+                      className={`visibility-toggle ${isHidden ? "hidden-dive" : ""}`}
+                      onClick={() => onToggleVisibility(i)}
+                      title={isHidden ? "Show dive" : "Hide dive"}
+                    >
+                      <EyeIcon open={!isHidden} />
+                    </button>
+                    <span
+                      className="dive-name clickable"
+                      onClick={() => toggleExpanded(i)}
+                    >
+                      {shortDateLabel(name)}
+                    </span>
+                    {discipline && (
+                      <span className="dive-discipline">
+                        {disciplineAbbrev(discipline)}
+                      </span>
+                    )}
+                    <span
+                      className="dive-chevron"
+                      onClick={() => toggleExpanded(i)}
+                    >
+                      <ChevronIcon open={isExpanded} />
+                    </span>
+                  </div>
+                  {isExpanded && (
+                    <ul className="dive-details">
+                      <li className="dive-detail-item">
+                        Max depth: {maxDepth.toFixed(1)}m
+                      </li>
+                      <li className="dive-detail-item">
+                        Duration: {formatDuration(duration)}
+                      </li>
+                      {weight !== undefined && (
+                        <li className="dive-detail-item">Weight: {weight}kg</li>
+                      )}
+                      {safety !== undefined && (
+                        <li className="dive-detail-item">
+                          Safety: {safety ? "Yes" : "No"}
+                        </li>
+                      )}
+                      {exposureSuit && (
+                        <li className="dive-detail-item">
+                          Exposure Suit: {formatExposureSuit(exposureSuit)}
+                        </li>
+                      )}
+                      {diveTags.map((tagName) => (
+                        <li key={tagName} className="dive-detail-item">
+                          {tagName}
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                  {weight !== undefined && (
-                    <li className="dive-detail-item">Weight: {weight}kg</li>
-                  )}
-                  {safety !== undefined && (
-                    <li className="dive-detail-item">
-                      Safety: {safety ? "Yes" : "No"}
-                    </li>
-                  )}
-                  {exposureSuit && (
-                    <li className="dive-detail-item">
-                      Exposure Suit: {formatExposureSuit(exposureSuit)}
-                    </li>
-                  )}
-                  {diveTags.map((tagName) => (
-                    <li key={tagName} className="dive-detail-item">
-                      {tagName}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          );
-        })}
+                </li>
+              );
+            })}
           </Fragment>
         ))}
       </ul>
