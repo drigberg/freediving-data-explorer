@@ -30,21 +30,16 @@ import FilterControls from "./FilterControls";
 import GroupingControls from "./GroupingControls";
 import Sidebar from "./Sidebar";
 import Chart2D from "./Chart2D";
-import Chart3D from "./Chart3D";
-
-type ViewMode = "2d" | "3d";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
-  const [mode, setMode] = useState<ViewMode>("2d");
   const [hiddenDives, setHiddenDives] = useState<Set<number>>(new Set());
   const [tags, setTags] = useState<Tag[]>([]);
   const [groupingConfig, setGroupingConfig] = useState<GroupingConfig | null>(
-    null
+    null,
   );
-  const [diveFilters, setDiveFilters] = useState<DiveFilterConfig>(
-    defaultDiveFilters
-  );
+  const [diveFilters, setDiveFilters] =
+    useState<DiveFilterConfig>(defaultDiveFilters);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,7 +53,7 @@ export default function App() {
 
   const data = useMemo<DiveData | null>(
     () => (store ? diveDataFromStore(store) : null),
-    [store]
+    [store],
   );
 
   const toggleVisibility = useCallback((index: number) => {
@@ -95,7 +90,7 @@ export default function App() {
         return updated;
       });
     },
-    []
+    [],
   );
 
   const handleWeightAssign = useCallback(
@@ -107,7 +102,7 @@ export default function App() {
         return updated;
       });
     },
-    []
+    [],
   );
 
   const handleSafetyAssign = useCallback(
@@ -119,7 +114,7 @@ export default function App() {
         return updated;
       });
     },
-    []
+    [],
   );
 
   const handleExposureSuitAssign = useCallback(
@@ -131,7 +126,7 @@ export default function App() {
         return updated;
       });
     },
-    []
+    [],
   );
 
   const handleImportClick = () => {
@@ -152,7 +147,7 @@ export default function App() {
         setImportMessage(
           added > 0
             ? `Imported ${added} new dive${added === 1 ? "" : "s"}`
-            : "No new dives found in file"
+            : "No new dives found in file",
         );
         setTimeout(() => setImportMessage(null), 4000);
         return merged;
@@ -160,12 +155,12 @@ export default function App() {
 
       e.target.value = "";
     },
-    []
+    [],
   );
 
   const filterOptions = useMemo(
     () => (data ? filterOptionsFromData(data) : null),
-    [data]
+    [data],
   );
 
   const visibleIndices = useMemo(() => {
@@ -192,7 +187,7 @@ export default function App() {
       groupingConfig
         ? processData(filteredData, groupingConfig)
         : { series: [] },
-    [filteredData, groupingConfig]
+    [filteredData, groupingConfig],
   );
 
   if (!store || !data || !groupingConfig) {
@@ -217,22 +212,13 @@ export default function App() {
             hidden
             onChange={handleFileSelected}
           />
-          <div className="mode-toggle">
-            <button
-              className={mode === "2d" ? "active" : ""}
-              onClick={() => setMode("2d")}
-            >
-              2D
-            </button>
-            <button
-              className={mode === "3d" ? "active" : ""}
-              onClick={() => setMode("3d")}
-            >
-              3D
-            </button>
-          </div>
         </div>
       </header>
+      <GroupingControls
+        config={groupingConfig}
+        totalSeries={filteredData.seriesNames.length}
+        onChange={setGroupingConfig}
+      />
       {filterOptions && (
         <FilterControls
           filters={diveFilters}
@@ -242,11 +228,6 @@ export default function App() {
           onChange={setDiveFilters}
         />
       )}
-      <GroupingControls
-        config={groupingConfig}
-        totalSeries={filteredData.seriesNames.length}
-        onChange={setGroupingConfig}
-      />
       <div className="app-body">
         <Sidebar
           seriesNames={data.seriesNames}
@@ -266,11 +247,7 @@ export default function App() {
           diveFilters={diveFilters}
         />
         <main className="app-main">
-          {mode === "2d" ? (
-            <Chart2D processed={processed} />
-          ) : (
-            <Chart3D processed={processed} />
-          )}
+          <Chart2D processed={processed} />
         </main>
       </div>
     </div>

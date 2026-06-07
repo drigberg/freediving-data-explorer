@@ -78,37 +78,6 @@ body,
   color: #e6edf3;
 }
 
-.mode-toggle {
-  display: flex;
-  gap: 0;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.mode-toggle button {
-  padding: 7px 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  color: #8b949e;
-  transition: all 0.2s ease;
-}
-
-.mode-toggle button.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e6edf3;
-  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.04);
-}
-
-.mode-toggle button:hover:not(.active) {
-  color: #c9d1d9;
-  background: rgba(255, 255, 255, 0.04);
-}
-
 /* ── Filter controls ── */
 
 .filter-controls {
@@ -941,12 +910,3 @@ body,
   color: #6e7681;
 }
 
-/* ── 3D hint ── */
-
-.chart-hint {
-  text-align: center;
-  font-size: 0.75rem;
-  color: #6e7681;
-  padding: 4px 0;
-  flex-shrink: 0;
-}
