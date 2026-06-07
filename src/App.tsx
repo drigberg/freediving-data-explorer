@@ -92,6 +92,7 @@ export default function App() {
       <div className="app-body">
         <Sidebar
           seriesNames={data.seriesNames}
+          seriesData={data.seriesData}
           hiddenDives={hiddenDives}
           onToggleVisibility={toggleVisibility}
           tags={tags}

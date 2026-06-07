@@ -2,11 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import type { ProcessedData } from "./grouping";
-import {
-  getSeriesColor,
-  getSeriesColorRgba,
-  getSeriesOpacity,
-} from "./colors";
+import { getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
 
 interface Chart2DProps {
   processed: ProcessedData;
@@ -99,7 +95,7 @@ export default function Chart2D({ processed }: Chart2DProps) {
                   color: getSeriesColorRgba(
                     i,
                     total,
-                    isActive ? 0.25 : 0.08 * opacity
+                    isActive ? 0.25 : 0.08 * opacity,
                   ),
                 },
                 { offset: 1, color: getSeriesColorRgba(i, total, 0) },
@@ -115,12 +111,12 @@ export default function Chart2D({ processed }: Chart2DProps) {
   }, [clampedActive, series]);
 
   const activePoints = series[clampedActive].data;
-  const maxDepth = activePoints.length > 0
-    ? Math.min(...activePoints.map(([, d]) => d))
-    : 0;
-  const duration = activePoints.length > 0
-    ? activePoints[activePoints.length - 1][0] - activePoints[0][0]
-    : 0;
+  const maxDepth =
+    activePoints.length > 0 ? Math.min(...activePoints.map(([, d]) => d)) : 0;
+  const duration =
+    activePoints.length > 0
+      ? activePoints[activePoints.length - 1][0] - activePoints[0][0]
+      : 0;
 
   return (
     <div className="chart-container">
@@ -135,7 +131,9 @@ export default function Chart2D({ processed }: Chart2DProps) {
         <label className="slider-label">
           Active: <strong>{series[clampedActive].label}</strong>
           <span className="slider-stats">
-            Maximum depth: {maxDepth.toFixed(1)}m | Duration: {Math.floor(duration / 60)}m{String(duration % 60).padStart(2, "0")}s
+            Maximum depth: {Math.abs(maxDepth).toFixed(1)}m | Duration:{" "}
+            {Math.floor(duration / 60)}m{String(duration % 60).padStart(2, "0")}
+            s
           </span>
         </label>
         <input

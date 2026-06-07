@@ -351,6 +351,47 @@ body,
   text-overflow: ellipsis;
 }
 
+.sidebar-dive-entry {
+  list-style: none;
+}
+
+.sidebar-dive-entry.expanded {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.dive-name.clickable {
+  cursor: pointer;
+}
+
+.dive-name.clickable:hover {
+  color: #58a6ff;
+}
+
+.dive-chevron {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: #6e7681;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.dive-chevron:hover {
+  color: #8b949e;
+}
+
+.dive-details {
+  list-style: none;
+  padding: 2px 12px 6px 36px;
+}
+
+.dive-detail-item {
+  font-size: 0.72rem;
+  color: #8b949e;
+  padding: 2px 0;
+}
+
 .dive-discipline {
   margin-left: auto;
   flex-shrink: 0;
