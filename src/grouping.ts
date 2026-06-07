@@ -1,4 +1,4 @@
-import type { DiveData } from "./parseData";
+import type { DiveData, ProfilePoint } from "./parseData";
 import { formatExposureSuit } from "./parseData";
 
 // ── Types ──
@@ -25,6 +25,7 @@ export interface Tag {
   diveIndices: Set<number>;
 }
 
+/** Chart-facing series: [time, depth] only (temperature stripped). */
 export interface ProcessedSeries {
   label: string;
   data: [number, number][];
@@ -55,12 +56,17 @@ function parseDate(seriesName: string): Date | null {
   );
 }
 
-function getDuration(points: [number, number][]): number {
+/** Strip optional temperature from profile points for chart-only use. */
+function stripTemp(pts: ProfilePoint[]): [number, number][] {
+  return pts.map(([t, d]) => [t, d]);
+}
+
+function getDuration(points: ProfilePoint[]): number {
   if (points.length === 0) return 0;
   return points[points.length - 1][0] - points[0][0];
 }
 
-function getMaxDepth(points: [number, number][]): number {
+function getMaxDepth(points: ProfilePoint[]): number {
   if (points.length === 0) return 0;
   return Math.min(...points.map(([, d]) => d));
 }
@@ -93,9 +99,7 @@ function dateIntervalKey(date: Date, unit: DateIntervalUnit): string {
   }
 }
 
-/**
- * Linear interpolation: given sorted points, return depth at the given time.
- */
+/** Linear interpolation on stripped [time, depth] points. */
 function interpolateAt(points: [number, number][], t: number): number {
   if (points.length === 0) return 0;
   if (t <= points[0][0]) return points[0][1];
@@ -219,13 +223,14 @@ function groupByExposureSuit(data: DiveData): Group[] {
 // ── Coalescing functions ──
 
 function coalesceAverage(
-  seriesData: [number, number][][],
+  seriesData: ProfilePoint[][],
   indices: number[],
 ): [number, number][] {
   if (indices.length === 0) return [];
-  if (indices.length === 1) return seriesData[indices[0]];
+  if (indices.length === 1) return stripTemp(seriesData[indices[0]]);
 
-  const durations = indices.map((i) => getDuration(seriesData[i]));
+  const stripped = indices.map((i) => stripTemp(seriesData[i]));
+  const durations = stripped.map(getDuration);
   const avgDuration = durations.reduce((a, b) => a + b, 0) / durations.length;
   if (avgDuration <= 0) return [[0, 0]];
 
@@ -236,20 +241,20 @@ function coalesceAverage(
   for (let s = 0; s < numSteps; s++) {
     const t = s * step;
     let depthSum = 0;
-    for (const idx of indices) {
-      const points = seriesData[idx];
-      const dur = getDuration(points);
+    for (let k = 0; k < stripped.length; k++) {
+      const points = stripped[k];
+      const dur = durations[k];
       const normalizedT = dur > 0 ? (t / avgDuration) * dur : 0;
       depthSum += interpolateAt(points, normalizedT + points[0][0]);
     }
-    result.push([t, Math.round((depthSum / indices.length) * 10) / 10]);
+    result.push([t, Math.round((depthSum / stripped.length) * 10) / 10]);
   }
 
   return result;
 }
 
 function coalesceLongest(
-  seriesData: [number, number][][],
+  seriesData: ProfilePoint[][],
   indices: number[],
 ): { pickedIndex: number; data: [number, number][] } {
   let best = indices[0];
@@ -261,11 +266,11 @@ function coalesceLongest(
       best = i;
     }
   }
-  return { pickedIndex: best, data: seriesData[best] };
+  return { pickedIndex: best, data: stripTemp(seriesData[best]) };
 }
 
 function coalesceDeepest(
-  seriesData: [number, number][][],
+  seriesData: ProfilePoint[][],
   indices: number[],
 ): { pickedIndex: number; data: [number, number][] } {
   let best = indices[0];
@@ -277,7 +282,7 @@ function coalesceDeepest(
       best = i;
     }
   }
-  return { pickedIndex: best, data: seriesData[best] };
+  return { pickedIndex: best, data: stripTemp(seriesData[best]) };
 }
 
 function ensureTrailingZero(points: [number, number][]): [number, number][] {
@@ -297,7 +302,7 @@ export function processData(
     return {
       series: data.seriesNames.map((name, i) => ({
         label: name,
-        data: data.seriesData[i],
+        data: stripTemp(data.seriesData[i]),
       })),
     };
   }

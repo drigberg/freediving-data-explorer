@@ -111,6 +111,8 @@ export function divePassesFilters(
 export function sliceDiveData(data: DiveData, indices: number[]): DiveData {
   return {
     seriesNames: indices.map((i) => data.seriesNames[i]),
+    datetimes: indices.map((i) => data.datetimes[i]),
+    diveNumbers: indices.map((i) => data.diveNumbers[i]),
     seriesData: indices.map((i) => data.seriesData[i]),
     disciplines: indices.map((i) => data.disciplines[i]),
     weights: indices.map((i) => data.weights[i]),

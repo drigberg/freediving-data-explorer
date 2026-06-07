@@ -9,7 +9,7 @@ import {
 import {
   diveDataFromStore,
   loadStore,
-  mergeCsvIntoStore,
+  mergeUddfIntoStore,
   saveStore,
   setDiveDisciplines,
   setDiveExposureSuits,
@@ -122,22 +122,29 @@ export default function App() {
 
   const handleFileSelected = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+      const files = Array.from(e.target.files ?? []);
+      if (files.length === 0) return;
 
-      const text = await file.text();
+      const texts = await Promise.all(files.map((f) => f.text()));
+
       setStore((prev) => {
         if (!prev) return prev;
-        const { store: merged, added } = mergeCsvIntoStore(prev, text);
-        saveStore(merged);
-        setTags(tagsFromStored(merged.tags, merged.dives));
+        let current = prev;
+        let totalAdded = 0;
+        for (const text of texts) {
+          const { store: merged, added } = mergeUddfIntoStore(current, text);
+          current = merged;
+          totalAdded += added;
+        }
+        saveStore(current);
+        setTags(tagsFromStored(current.tags, current.dives));
         setImportMessage(
-          added > 0
-            ? `Imported ${added} new dive${added === 1 ? "" : "s"}`
-            : "No new dives found in file",
+          totalAdded > 0
+            ? `Imported ${totalAdded} new dive${totalAdded === 1 ? "" : "s"}`
+            : "No new dives found in file(s)",
         );
         setTimeout(() => setImportMessage(null), 4000);
-        return merged;
+        return current;
       });
 
       e.target.value = "";
@@ -159,6 +166,8 @@ export default function App() {
     if (!data) {
       return {
         seriesNames: [],
+        datetimes: [],
+        diveNumbers: [],
         seriesData: [],
         disciplines: [],
         weights: [],
@@ -194,7 +203,8 @@ export default function App() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv"
+            accept=".uddf"
+            multiple
             hidden
             onChange={handleFileSelected}
           />

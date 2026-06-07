@@ -1,5 +1,3 @@
-import Papa from "papaparse";
-
 export interface ExposureSuit {
   openCell: boolean;
   thicknessMm: number;
@@ -10,58 +8,97 @@ export function formatExposureSuit(suit: ExposureSuit): string {
   return `${cellType}, ${suit.thicknessMm}mm`;
 }
 
+// Profile point: [timeSeconds, depthMeters (negative), temperatureCelsius?]
+export type ProfilePoint = [number, number, number?];
+
 export interface DiveData {
   seriesNames: string[];
-  seriesData: [number, number][][];
+  datetimes: string[];
+  diveNumbers: number[];
+  seriesData: ProfilePoint[][];
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
 }
 
-const TIME_STEP = 2;
+/** Derive a display-friendly series name from a dive's datetime + diveNumber. */
+export function seriesNameFromDive(datetime: string, diveNumber: number): string {
+  return `${datetime.slice(0, 10)} #${diveNumber}`;
+}
 
+/** Extract the YYYY-MM-DD date portion from a series name (e.g. "2026-02-07 #47"). */
 export function extractDateKey(seriesName: string): string | null {
   const match = seriesName.match(/^(\d{4}-\d{2}-\d{2})/);
   return match ? match[1] : null;
 }
 
-function ensureTrailingZero(points: [number, number][]): [number, number][] {
+function getEl(parent: Element | Document, tag: string): Element | null {
+  return parent.getElementsByTagName(tag)[0] ?? null;
+}
+
+function getText(parent: Element | Document, tag: string): string | null {
+  return getEl(parent, tag)?.textContent?.trim() ?? null;
+}
+
+function ensureTrailingZero(points: ProfilePoint[]): ProfilePoint[] {
   if (points.length > 0 && points[points.length - 1][1] !== 0) {
-    return [...points, [points[points.length - 1][0] + TIME_STEP, 0]];
+    return [...points, [points[points.length - 1][0] + 2, 0]];
   }
   return points;
 }
 
-export function parseCsvString(csv: string): DiveData {
-  const result = Papa.parse<Record<string, string | number | null>>(csv, {
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-  });
+export interface ParsedUddfDive {
+  datetime: string;
+  diveNumber: number;
+  profile: ProfilePoint[];
+}
 
-  const headers = result.meta.fields ?? [];
-  const timeHeader = headers[0];
-  const seriesNames = headers.slice(1);
+/**
+ * Parse a single UDDF XML file string and return the dive's metadata + profile.
+ * Returns null if the XML is malformed or the required fields are missing.
+ */
+export function parseUddfString(xml: string): ParsedUddfDive | null {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, "application/xml");
 
-  const seriesData: [number, number][][] = seriesNames.map(() => []);
+  if (doc.querySelector("parsererror")) return null;
 
-  for (const row of result.data) {
-    const time = row[timeHeader];
-    if (typeof time !== "number") continue;
+  const infoBefore = getEl(doc, "informationbeforedive");
+  if (!infoBefore) return null;
 
-    for (let i = 0; i < seriesNames.length; i++) {
-      const depth = row[seriesNames[i]];
-      if (typeof depth === "number") {
-        seriesData[i].push([time, depth]);
-      }
+  const datetime = getText(infoBefore, "datetime");
+  if (!datetime) return null;
+
+  const diveNumberStr = getText(infoBefore, "divenumber");
+  const diveNumber = diveNumberStr ? parseInt(diveNumberStr, 10) : 0;
+
+  const waypoints = doc.getElementsByTagName("waypoint");
+  const profile: ProfilePoint[] = [];
+
+  for (const wp of waypoints) {
+    const depthStr = getText(wp, "depth");
+    const timeStr = getText(wp, "divetime");
+    if (depthStr === null || timeStr === null) continue;
+
+    const depth = -parseFloat(depthStr);
+    const time = parseInt(timeStr, 10);
+    if (isNaN(depth) || isNaN(time)) continue;
+
+    const tempStr = getText(wp, "temperature");
+    if (tempStr !== null) {
+      const kelvin = parseFloat(tempStr);
+      const celsius = Math.round((kelvin - 273.15) * 10) / 10;
+      profile.push([time, depth, celsius]);
+    } else {
+      profile.push([time, depth]);
     }
   }
 
+  if (profile.length === 0) return null;
+
   return {
-    seriesNames,
-    seriesData: seriesData.map(ensureTrailingZero),
-    disciplines: seriesNames.map(() => undefined),
-    weights: seriesNames.map(() => undefined),
-    exposureSuits: seriesNames.map(() => undefined),
+    datetime,
+    diveNumber,
+    profile: ensureTrailingZero(profile),
   };
 }

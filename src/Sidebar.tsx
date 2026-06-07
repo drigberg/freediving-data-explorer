@@ -6,7 +6,7 @@ import WeightDialog from "./WeightDialog";
 import ExposureSuitDialog from "./ExposureSuitDialog";
 import EditDialog from "./AddTagDialog";
 import { disciplineAbbrev, isSafetyDynbDiscipline } from "./disciplines";
-import type { ExposureSuit } from "./parseData";
+import type { ExposureSuit, ProfilePoint } from "./parseData";
 import { extractDateKey, formatExposureSuit } from "./parseData";
 import {
   divePassesFilters,
@@ -17,7 +17,7 @@ import type { Tag } from "./grouping";
 
 interface SidebarProps {
   seriesNames: string[];
-  seriesData: [number, number][][];
+  seriesData: ProfilePoint[][];
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
@@ -295,6 +295,8 @@ export default function Sidebar({
   const diveData = useMemo(
     () => ({
       seriesNames,
+      datetimes: [] as string[],
+      diveNumbers: [] as number[],
       seriesData,
       disciplines,
       weights,
@@ -359,6 +361,11 @@ export default function Sidebar({
       points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
     const duration =
       points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
+    const temps = points
+      .map(([, , t]) => t)
+      .filter((t): t is number => t !== undefined);
+    const maxTemp = temps.length > 0 ? Math.max(...temps) : undefined;
+    const minTemp = temps.length > 0 ? Math.min(...temps) : undefined;
     const weight = weights[i];
     const exposureSuit = exposureSuits[i];
 
@@ -403,6 +410,16 @@ export default function Sidebar({
                 className={`dive-detail-item${isSafetyDynbDiscipline(discipline) ? " safety-dynb-discipline" : ""}`}
               >
                 Discipline: {discipline}
+              </li>
+            )}
+            {maxTemp !== undefined && (
+              <li className="dive-detail-item">
+                Max temperature: {maxTemp.toFixed(1)}°C
+              </li>
+            )}
+            {minTemp !== undefined && (
+              <li className="dive-detail-item">
+                Min temperature: {minTemp.toFixed(1)}°C
               </li>
             )}
             {weight !== undefined && (
