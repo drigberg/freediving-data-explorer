@@ -1,6 +1,6 @@
 import { disciplineAbbrev } from "./disciplines";
 import type { DiveFilterConfig, DiveFilterOptions } from "./filters";
-import { hasActiveFilters } from "./filters";
+import { defaultDiveFilters, hasActiveFilters } from "./filters";
 
 interface FilterControlsProps {
   filters: DiveFilterConfig;
@@ -14,6 +14,12 @@ function toggleValue<T>(list: T[], value: T): T[] {
   return list.includes(value)
     ? list.filter((item) => item !== value)
     : [...list, value];
+}
+
+function parseNullableInt(value: string): number | null {
+  if (value === "") return null;
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 function FilterChips({
@@ -132,6 +138,88 @@ export default function FilterControls({
             />
           </div>
         )}
+
+        <div className="filter-row">
+          <span className="filter-sublabel">Duration (s)</span>
+          <input
+            type="number"
+            className="filter-number-input"
+            min={options.durationMin}
+            max={options.durationMax}
+            step={1}
+            value={filters.duration.min ?? ""}
+            onChange={(e) =>
+              update({
+                duration: {
+                  ...filters.duration,
+                  min: parseNullableInt(e.target.value),
+                },
+              })
+            }
+            aria-label="Minimum duration in seconds"
+            placeholder="Min"
+          />
+          <span className="filter-date-separator">to</span>
+          <input
+            type="number"
+            className="filter-number-input"
+            min={options.durationMin}
+            max={options.durationMax}
+            step={1}
+            value={filters.duration.max ?? ""}
+            onChange={(e) =>
+              update({
+                duration: {
+                  ...filters.duration,
+                  max: parseNullableInt(e.target.value),
+                },
+              })
+            }
+            aria-label="Maximum duration in seconds"
+            placeholder="Max"
+          />
+        </div>
+
+        <div className="filter-row">
+          <span className="filter-sublabel">Max depth (m)</span>
+          <input
+            type="number"
+            className="filter-number-input"
+            min={options.maxDepthMin}
+            max={options.maxDepthMax}
+            step={1}
+            value={filters.maxDepth.min ?? ""}
+            onChange={(e) =>
+              update({
+                maxDepth: {
+                  ...filters.maxDepth,
+                  min: parseNullableInt(e.target.value),
+                },
+              })
+            }
+            aria-label="Minimum max depth in meters"
+            placeholder="Min"
+          />
+          <span className="filter-date-separator">to</span>
+          <input
+            type="number"
+            className="filter-number-input"
+            min={options.maxDepthMin}
+            max={options.maxDepthMax}
+            step={1}
+            value={filters.maxDepth.max ?? ""}
+            onChange={(e) =>
+              update({
+                maxDepth: {
+                  ...filters.maxDepth,
+                  max: parseNullableInt(e.target.value),
+                },
+              })
+            }
+            aria-label="Maximum max depth in meters"
+            placeholder="Max"
+          />
+        </div>
       </div>
 
       <div className="filter-actions">
@@ -142,15 +230,7 @@ export default function FilterControls({
           type="button"
           className="filter-clear-btn"
           disabled={!active}
-          onClick={() =>
-            onChange({
-              disciplines: [],
-              weights: [],
-              exposureSuits: [],
-              dateFrom: null,
-              dateTo: null,
-            })
-          }
+          onClick={() => onChange(defaultDiveFilters())}
         >
           Clear filters
         </button>

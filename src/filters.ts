@@ -1,6 +1,11 @@
 import { sortDisciplinesForFilter } from "./disciplines";
-import type { DiveData } from "./parseData";
+import type { DiveData, ProfilePoint } from "./parseData";
 import { extractDateKey, formatExposureSuit } from "./parseData";
+
+export interface NullableIntRange {
+  min: number | null;
+  max: number | null;
+}
 
 export interface DiveFilterConfig {
   disciplines: string[];
@@ -8,6 +13,8 @@ export interface DiveFilterConfig {
   exposureSuits: string[];
   dateFrom: string | null;
   dateTo: string | null;
+  duration: NullableIntRange;
+  maxDepth: NullableIntRange;
 }
 
 export interface DiveFilterOptions {
@@ -16,7 +23,13 @@ export interface DiveFilterOptions {
   exposureSuits: string[];
   dateMin: string;
   dateMax: string;
+  durationMin: number;
+  durationMax: number;
+  maxDepthMin: number;
+  maxDepthMax: number;
 }
+
+const emptyIntRange = (): NullableIntRange => ({ min: null, max: null });
 
 export function defaultDiveFilters(): DiveFilterConfig {
   return {
@@ -25,7 +38,32 @@ export function defaultDiveFilters(): DiveFilterConfig {
     exposureSuits: [],
     dateFrom: null,
     dateTo: null,
+    duration: emptyIntRange(),
+    maxDepth: emptyIntRange(),
   };
+}
+
+function diveDurationSeconds(points: ProfilePoint[]): number {
+  if (points.length === 0) return 0;
+  return Math.round(points[points.length - 1][0] - points[0][0]);
+}
+
+function diveMaxDepthMeters(points: ProfilePoint[]): number {
+  if (points.length === 0) return 0;
+  return Math.round(Math.abs(Math.min(...points.map(([, d]) => d))));
+}
+
+function intRangeIsActive(range: NullableIntRange): boolean {
+  return range.min !== null || range.max !== null;
+}
+
+function divePassesIntRange(
+  value: number,
+  range: NullableIntRange,
+): boolean {
+  if (range.min !== null && value < range.min) return false;
+  if (range.max !== null && value > range.max) return false;
+  return true;
 }
 
 export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
@@ -34,6 +72,10 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
   const exposureSuitSet = new Set<string>();
   let dateMin = "";
   let dateMax = "";
+  let durationMin = Infinity;
+  let durationMax = -Infinity;
+  let maxDepthMin = Infinity;
+  let maxDepthMax = -Infinity;
 
   for (let i = 0; i < data.seriesNames.length; i++) {
     const discipline = data.disciplines[i];
@@ -50,6 +92,14 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
       if (!dateMin || date < dateMin) dateMin = date;
       if (!dateMax || date > dateMax) dateMax = date;
     }
+
+    const duration = diveDurationSeconds(data.seriesData[i]);
+    if (duration < durationMin) durationMin = duration;
+    if (duration > durationMax) durationMax = duration;
+
+    const maxDepth = diveMaxDepthMeters(data.seriesData[i]);
+    if (maxDepth < maxDepthMin) maxDepthMin = maxDepth;
+    if (maxDepth > maxDepthMax) maxDepthMax = maxDepth;
   }
 
   return {
@@ -58,6 +108,10 @@ export function filterOptionsFromData(data: DiveData): DiveFilterOptions {
     exposureSuits: [...exposureSuitSet].sort(),
     dateMin,
     dateMax,
+    durationMin: durationMin === Infinity ? 0 : durationMin,
+    durationMax: durationMax === -Infinity ? 0 : durationMax,
+    maxDepthMin: maxDepthMin === Infinity ? 0 : maxDepthMin,
+    maxDepthMax: maxDepthMax === -Infinity ? 0 : maxDepthMax,
   };
 }
 
@@ -67,7 +121,9 @@ export function hasActiveFilters(filters: DiveFilterConfig): boolean {
     filters.weights.length > 0 ||
     filters.exposureSuits.length > 0 ||
     filters.dateFrom !== null ||
-    filters.dateTo !== null
+    filters.dateTo !== null ||
+    intRangeIsActive(filters.duration) ||
+    intRangeIsActive(filters.maxDepth)
   );
 }
 
@@ -103,6 +159,16 @@ export function divePassesFilters(
   }
   if (filters.dateTo) {
     if (!date || date > filters.dateTo) return false;
+  }
+
+  if (intRangeIsActive(filters.duration)) {
+    const duration = diveDurationSeconds(data.seriesData[index]);
+    if (!divePassesIntRange(duration, filters.duration)) return false;
+  }
+
+  if (intRangeIsActive(filters.maxDepth)) {
+    const maxDepth = diveMaxDepthMeters(data.seriesData[index]);
+    if (!divePassesIntRange(maxDepth, filters.maxDepth)) return false;
   }
 
   return true;
