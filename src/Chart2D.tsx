@@ -1,10 +1,7 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
-import {
-  chartSeriesIndexForGlobalDive,
-  type ProcessedData,
-} from "./grouping";
+import { chartSeriesIndexForGlobalDive, type ProcessedData } from "./grouping";
 import { getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
 
 interface Chart2DProps {
@@ -17,6 +14,7 @@ interface Chart2DProps {
 type SeriesEventParams = {
   componentType?: string;
   seriesIndex?: number;
+  dataIndex?: number;
 };
 
 const ACTIVE_LINE_COLOR = "#ffffff";
@@ -27,7 +25,8 @@ export default function Chart2D({
   activeDiveIndex,
   onActiveDiveChange,
 }: Chart2DProps) {
-  const { series } = processed;
+  const { series, chartMode, aggregationMetric } = processed;
+  const isBarChart = chartMode === "bar";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
 
@@ -57,21 +56,32 @@ export default function Chart2D({
     [series, visibleIndices, onActiveDiveChange],
   );
 
-  const handleSeriesClick = useCallback(
+  const resolveSeriesIndex = useCallback(
     (params: SeriesEventParams) => {
-      if (params.componentType === "series" && params.seriesIndex != null) {
-        setActiveIndex(params.seriesIndex);
-        notifyActiveDive(params.seriesIndex);
-      }
+      if (params.componentType !== "series") return null;
+      if (isBarChart && params.dataIndex != null) return params.dataIndex;
+      if (!isBarChart && params.seriesIndex != null) return params.seriesIndex;
+      return null;
     },
-    [notifyActiveDive],
+    [isBarChart],
   );
 
-  const handleSeriesMouseOver = useCallback((params: SeriesEventParams) => {
-    if (params.componentType === "series" && params.seriesIndex != null) {
-      setHoveringLine(true);
-    }
-  }, []);
+  const handleSeriesClick = useCallback(
+    (params: SeriesEventParams) => {
+      const seriesIndex = resolveSeriesIndex(params);
+      if (seriesIndex == null) return;
+      setActiveIndex(seriesIndex);
+      notifyActiveDive(seriesIndex);
+    },
+    [notifyActiveDive, resolveSeriesIndex],
+  );
+
+  const handleSeriesMouseOver = useCallback(
+    (params: SeriesEventParams) => {
+      if (resolveSeriesIndex(params) != null) setHoveringLine(true);
+    },
+    [resolveSeriesIndex],
+  );
 
   const handleSeriesMouseOut = useCallback(() => {
     setHoveringLine(false);
@@ -89,6 +99,84 @@ export default function Chart2D({
 
   const option = useMemo<EChartsOption>(() => {
     const total = series.length;
+
+    if (isBarChart) {
+      const yAxisName =
+        aggregationMetric === "duration"
+          ? "Total duration (sec)"
+          : "Total distance swum vertically (m)";
+
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          borderColor: ACTIVE_LINE_COLOR,
+          borderWidth: 1,
+          textStyle: { color: "#e6edf3", fontSize: 12 },
+          axisPointer: { type: "shadow" },
+        },
+        grid: {
+          left: 60,
+          right: 24,
+          top: 24,
+          bottom: 60,
+        },
+        xAxis: {
+          type: "category",
+          data: series.map((s) => s.label),
+          name: "Group",
+          nameLocation: "middle",
+          nameGap: 42,
+          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: {
+            color: "#8b949e",
+            rotate: series.length > 8 ? 35 : 0,
+            interval: 0,
+          },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "value",
+          name: yAxisName,
+          nameLocation: "middle",
+          nameGap: 48,
+          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: { color: "#8b949e" },
+          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+        },
+        series: [
+          {
+            type: "bar" as const,
+            data: series.map((s, i) => {
+              const isActive = i === clampedActive;
+              const color = isActive
+                ? ACTIVE_LINE_COLOR
+                : getSeriesColor(i, total);
+              return {
+                value: s.aggregationValue ?? 0,
+                itemStyle: {
+                  color,
+                  opacity: isActive
+                    ? 1
+                    : getSeriesOpacity(i, clampedActive, total),
+                  shadowBlur: isActive ? 12 : 0,
+                  shadowColor: isActive
+                    ? "rgba(255, 255, 255, 0.45)"
+                    : undefined,
+                },
+              };
+            }),
+            triggerEvent: true,
+            barMaxWidth: 48,
+          },
+        ],
+        animation: true,
+        animationDuration: 400,
+      };
+    }
 
     return {
       backgroundColor: "transparent",
@@ -175,20 +263,42 @@ export default function Chart2D({
       animation: true,
       animationDuration: 400,
     };
-  }, [clampedActive, series]);
+  }, [aggregationMetric, clampedActive, isBarChart, series]);
 
-  const activePoints = series[clampedActive].data;
+  const activeSeries = series[clampedActive];
+  const activePoints = activeSeries.data;
   const maxDepth =
     activePoints.length > 0 ? Math.min(...activePoints.map(([, d]) => d)) : 0;
   const duration =
     activePoints.length > 0
       ? activePoints[activePoints.length - 1][0] - activePoints[0][0]
       : 0;
+  const aggregationValue = activeSeries.aggregationValue ?? 0;
+
+  const statsText = isBarChart ? (
+    <>
+      {aggregationMetric === "duration" ? (
+        <>
+          Total duration: {Math.floor(aggregationValue / 60)}m
+          {String(Math.round(aggregationValue % 60)).padStart(2, "0")}s
+        </>
+      ) : (
+        <>Total distance swum: {aggregationValue.toFixed(1)}m</>
+      )}
+      {" | "}
+      Dives: {activeSeries.diveIndices.length}
+    </>
+  ) : (
+    <>
+      Maximum depth: {Math.abs(maxDepth).toFixed(1)}m | Duration:{" "}
+      {Math.floor(duration / 60)}m{String(duration % 60).padStart(2, "0")}s
+    </>
+  );
 
   return (
     <div className="chart-container">
       <div
-        className={`chart-plot${hoveringLine ? " chart-plot--hover-line" : ""}`}
+        className={`chart-plot${!isBarChart && hoveringLine ? " chart-plot--hover-line" : ""}`}
       >
         <ReactECharts
           option={option}
@@ -201,12 +311,8 @@ export default function Chart2D({
       </div>
       <div className="slider-container">
         <label className="slider-label">
-          Active: <strong>{series[clampedActive].label}</strong>
-          <span className="slider-stats">
-            Maximum depth: {Math.abs(maxDepth).toFixed(1)}m | Duration:{" "}
-            {Math.floor(duration / 60)}m{String(duration % 60).padStart(2, "0")}
-            s
-          </span>
+          Active: <strong>{activeSeries.label}</strong>
+          <span className="slider-stats">{statsText}</span>
         </label>
         <input
           type="range"
@@ -214,12 +320,8 @@ export default function Chart2D({
           max={series.length - 1}
           value={clampedActive}
           onChange={(e) => setActiveIndex(Number(e.target.value))}
-          onMouseUp={(e) =>
-            notifyActiveDive(Number(e.currentTarget.value))
-          }
-          onTouchEnd={(e) =>
-            notifyActiveDive(Number(e.currentTarget.value))
-          }
+          onMouseUp={(e) => notifyActiveDive(Number(e.currentTarget.value))}
+          onTouchEnd={(e) => notifyActiveDive(Number(e.currentTarget.value))}
           className="series-slider"
         />
         <div className="slider-endpoints">

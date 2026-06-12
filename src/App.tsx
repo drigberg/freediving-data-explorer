@@ -198,7 +198,7 @@ export default function App() {
     () =>
       groupingConfig
         ? processData(filteredData, groupingConfig)
-        : { series: [] },
+        : { chartMode: "line" as const, series: [] },
     [filteredData, groupingConfig],
   );
 

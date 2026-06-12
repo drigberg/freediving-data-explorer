@@ -12,12 +12,14 @@ export type GroupMode =
 export type DateIntervalUnit = "month" | "quarter" | "year";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
+export type AggregationMode = "none" | "distance" | "duration";
 
 export interface GroupingConfig {
   groupMode: GroupMode;
   dateIntervalUnit: DateIntervalUnit;
   displayMode: DisplayMode;
   maximumCriterion: RankCriterion;
+  aggregationMode: AggregationMode;
 }
 
 export interface Tag {
@@ -29,6 +31,8 @@ export interface Tag {
 export interface ProcessedSeries {
   label: string;
   data: [number, number][];
+  /** Bar height when chartMode is "bar". */
+  aggregationValue?: number;
   /** Index into the filtered DiveData for sidebar scroll/highlight. */
   primaryDiveIndex: number;
   /** Filtered DiveData indices represented by this series. */
@@ -36,6 +40,8 @@ export interface ProcessedSeries {
 }
 
 export interface ProcessedData {
+  chartMode: "line" | "bar";
+  aggregationMetric?: "distance" | "duration";
   series: ProcessedSeries[];
 }
 
@@ -45,6 +51,7 @@ export function defaultGroupingConfig(): GroupingConfig {
     dateIntervalUnit: "month",
     displayMode: "average",
     maximumCriterion: "longest",
+    aggregationMode: "none",
   };
 }
 
@@ -298,12 +305,72 @@ function ensureTrailingZero(points: [number, number][]): [number, number][] {
 
 // ── Main processing ──
 
+function resolveGroups(data: DiveData, config: GroupingConfig): Group[] {
+  switch (config.groupMode) {
+    case "dateInterval":
+      return groupByDateInterval(data, config.dateIntervalUnit);
+    case "discipline":
+      return groupByDiscipline(data);
+    case "weight":
+      return groupByWeight(data);
+    case "exposureSuit":
+      return groupByExposureSuit(data);
+    default:
+      return groupByNone(data);
+  }
+}
+
+function aggregateGroupValue(
+  seriesData: ProfilePoint[][],
+  indices: number[],
+  mode: "distance" | "duration",
+): number {
+  // For depth, multiply by 2, because all (non-blackout) dives involve swimming down and back up!
+  return Math.round(
+    (mode === "distance" ? 2 : 1) *
+      indices.reduce((sum, i) => {
+        const points = seriesData[i];
+        if (mode === "distance") {
+          return sum + Math.abs(getMaxDepth(points));
+        }
+        return sum + getDuration(points);
+      }, 0),
+  );
+}
+
+function processAggregatedData(
+  data: DiveData,
+  config: GroupingConfig,
+): ProcessedData {
+  const metric = config.aggregationMode as "distance" | "duration";
+  const groups = resolveGroups(data, config);
+
+  const series: ProcessedSeries[] = groups.map((group) => ({
+    label: group.label,
+    data: [],
+    aggregationValue: aggregateGroupValue(
+      data.seriesData,
+      group.indices,
+      metric,
+    ),
+    primaryDiveIndex: Math.max(...group.indices),
+    diveIndices: group.indices,
+  }));
+
+  return { chartMode: "bar", aggregationMetric: metric, series };
+}
+
 export function processData(
   data: DiveData,
   config: GroupingConfig,
 ): ProcessedData {
+  if (config.aggregationMode !== "none") {
+    return processAggregatedData(data, config);
+  }
+
   if (config.groupMode === "none") {
     return {
+      chartMode: "line",
       series: data.seriesNames.map((name, i) => ({
         label: name,
         data: stripTemp(data.seriesData[i]),
@@ -313,23 +380,7 @@ export function processData(
     };
   }
 
-  let groups: Group[];
-  switch (config.groupMode) {
-    case "dateInterval":
-      groups = groupByDateInterval(data, config.dateIntervalUnit);
-      break;
-    case "discipline":
-      groups = groupByDiscipline(data);
-      break;
-    case "weight":
-      groups = groupByWeight(data);
-      break;
-    case "exposureSuit":
-      groups = groupByExposureSuit(data);
-      break;
-    default:
-      groups = groupByNone(data);
-  }
+  const groups = resolveGroups(data, config);
 
   const series: ProcessedSeries[] = groups.map((group) => {
     let seriesPoints: [number, number][];
@@ -359,7 +410,7 @@ export function processData(
     };
   });
 
-  return { series };
+  return { chartMode: "line", series };
 }
 
 export function chartSeriesIndexForGlobalDive(

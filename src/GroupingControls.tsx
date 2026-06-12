@@ -4,6 +4,7 @@ import type {
   DateIntervalUnit,
   DisplayMode,
   RankCriterion,
+  AggregationMode,
 } from "./grouping";
 
 interface GroupingControlsProps {
@@ -81,6 +82,22 @@ export default function GroupingControls({
       )}
 
       {config.groupMode !== "none" && (
+        <div className="grouping-row">
+          <span className="grouping-label">Aggregation</span>
+          <SegmentButtons<AggregationMode>
+            options={["none", "distance", "duration"]}
+            value={config.aggregationMode}
+            onChange={(aggregationMode) => update({ aggregationMode })}
+            labels={{
+              none: "None",
+              distance: "Distance",
+              duration: "Duration",
+            }}
+          />
+        </div>
+      )}
+
+      {config.groupMode !== "none" && config.aggregationMode === "none" && (
         <>
           <div className="grouping-row">
             <span className="grouping-label">Display</span>
