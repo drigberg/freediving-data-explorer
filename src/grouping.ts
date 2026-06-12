@@ -8,8 +8,11 @@ export type GroupMode =
   | "dateInterval"
   | "discipline"
   | "weight"
-  | "exposureSuit";
+  | "exposureSuit"
+  | "temperature";
 export type DateIntervalUnit = "month" | "quarter" | "year";
+export type TemperatureIncrement = 1 | 5 | 10;
+export type TemperatureMode = "max" | "min" | "difference";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
 export type AggregationMode = "none" | "distance" | "duration";
@@ -17,6 +20,8 @@ export type AggregationMode = "none" | "distance" | "duration";
 export interface GroupingConfig {
   groupMode: GroupMode;
   dateIntervalUnit: DateIntervalUnit;
+  temperatureIncrement: TemperatureIncrement;
+  temperatureMode: TemperatureMode;
   displayMode: DisplayMode;
   maximumCriterion: RankCriterion;
   aggregationMode: AggregationMode;
@@ -49,6 +54,8 @@ export function defaultGroupingConfig(): GroupingConfig {
   return {
     groupMode: "none",
     dateIntervalUnit: "month",
+    temperatureIncrement: 5,
+    temperatureMode: "max",
     displayMode: "average",
     maximumCriterion: "longest",
     aggregationMode: "none",
@@ -231,6 +238,71 @@ function groupByExposureSuit(data: DiveData): Group[] {
   );
 }
 
+function getDiveTemperatureValue(
+  points: ProfilePoint[],
+  mode: TemperatureMode,
+): number | undefined {
+  const temps = points
+    .map(([, , t]) => t)
+    .filter((t): t is number => t !== undefined);
+  if (temps.length === 0) return undefined;
+
+  const max = Math.max(...temps);
+  const min = Math.min(...temps);
+  switch (mode) {
+    case "max":
+      return max;
+    case "min":
+      return min;
+    case "difference":
+      return max - min;
+  }
+}
+
+function temperatureBucketKey(
+  celsius: number,
+  increment: TemperatureIncrement,
+  mode: TemperatureMode,
+): string {
+  const lower = Math.floor(celsius / increment) * increment;
+  const upper = lower + increment;
+  if (increment === 1) {
+    return mode === "max" ? `${upper}°C` : `${lower}°C`;
+  }
+  return `${lower}–${upper}°C`;
+}
+
+function temperatureBucketLower(key: string): number {
+  if (!key.includes("-")) {
+    return parseInt(key, 10);
+  }
+  const match = key.match(/^(-?\d+)–/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+function groupByTemperature(
+  data: DiveData,
+  increment: TemperatureIncrement,
+  mode: TemperatureMode,
+): Group[] {
+  return groupByProperty(
+    data,
+    (i) => {
+      const value = getDiveTemperatureValue(data.seriesData[i], mode);
+      return value !== undefined
+        ? temperatureBucketKey(value, increment, mode)
+        : undefined;
+    },
+    (keys) => {
+      const unknown = keys.filter((k) => k === "(Unknown)");
+      const known = keys
+        .filter((k) => k !== "(Unknown)")
+        .sort((a, b) => temperatureBucketLower(a) - temperatureBucketLower(b));
+      return [...known, ...unknown];
+    },
+  );
+}
+
 // ── Coalescing functions ──
 
 function coalesceAverage(
@@ -315,6 +387,12 @@ function resolveGroups(data: DiveData, config: GroupingConfig): Group[] {
       return groupByWeight(data);
     case "exposureSuit":
       return groupByExposureSuit(data);
+    case "temperature":
+      return groupByTemperature(
+        data,
+        config.temperatureIncrement,
+        config.temperatureMode,
+      );
     default:
       return groupByNone(data);
   }

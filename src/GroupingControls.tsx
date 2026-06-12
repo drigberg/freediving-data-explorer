@@ -2,6 +2,8 @@ import type {
   GroupingConfig,
   GroupMode,
   DateIntervalUnit,
+  TemperatureIncrement,
+  TemperatureMode,
   DisplayMode,
   RankCriterion,
   AggregationMode,
@@ -12,7 +14,7 @@ interface GroupingControlsProps {
   onChange: (config: GroupingConfig) => void;
 }
 
-function SegmentButtons<T extends string>({
+function SegmentButtons<T extends string | number>({
   options,
   value,
   onChange,
@@ -27,11 +29,11 @@ function SegmentButtons<T extends string>({
     <div className="segment-buttons">
       {options.map((opt) => (
         <button
-          key={opt}
+          key={String(opt)}
           className={value === opt ? "active" : ""}
           onClick={() => onChange(opt)}
         >
-          {labels?.[opt] ?? opt}
+          {labels?.[opt] ?? String(opt)}
         </button>
       ))}
     </div>
@@ -56,6 +58,7 @@ export default function GroupingControls({
             "dateInterval",
             "weight",
             "exposureSuit",
+            "temperature",
           ]}
           value={config.groupMode}
           onChange={(groupMode) =>
@@ -70,6 +73,7 @@ export default function GroupingControls({
             discipline: "Discipline",
             weight: "Weight",
             exposureSuit: "Exposure suit",
+            temperature: "Temperature",
           }}
         />
       </div>
@@ -84,6 +88,35 @@ export default function GroupingControls({
             labels={{ month: "Month", quarter: "Quarter", year: "Year" }}
           />
         </div>
+      )}
+
+      {config.groupMode === "temperature" && (
+        <>
+          <div className="grouping-row">
+            <span className="grouping-label">Increment</span>
+            <SegmentButtons<TemperatureIncrement>
+              options={[1, 5, 10]}
+              value={config.temperatureIncrement}
+              onChange={(temperatureIncrement) =>
+                update({ temperatureIncrement })
+              }
+              labels={{ 1: "1°C", 5: "5°C", 10: "10°C" }}
+            />
+          </div>
+          <div className="grouping-row">
+            <span className="grouping-label">Mode</span>
+            <SegmentButtons<TemperatureMode>
+              options={["max", "min", "difference"]}
+              value={config.temperatureMode}
+              onChange={(temperatureMode) => update({ temperatureMode })}
+              labels={{
+                max: "Max",
+                min: "Min",
+                difference: "Difference",
+              }}
+            />
+          </div>
+        </>
       )}
 
       {config.groupMode !== "none" && (
