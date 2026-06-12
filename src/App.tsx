@@ -261,6 +261,7 @@ export default function App() {
         <main className="app-main">
           {processed.series.length > 0 ? (
             <Chart2D
+              groupingConfig={groupingConfig}
               processed={processed}
               visibleIndices={visibleIndices}
               activeDiveIndex={activeSidebarDive}

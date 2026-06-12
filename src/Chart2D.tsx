@@ -1,7 +1,11 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
-import { chartSeriesIndexForGlobalDive, type ProcessedData } from "./grouping";
+import {
+  chartSeriesIndexForGlobalDive,
+  GroupingConfig,
+  type ProcessedData,
+} from "./grouping";
 import { getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
 
 interface Chart2DProps {
@@ -9,6 +13,7 @@ interface Chart2DProps {
   visibleIndices: number[];
   activeDiveIndex?: number | null;
   onActiveDiveChange?: (globalDiveIndex: number) => void;
+  groupingConfig: GroupingConfig;
 }
 
 type SeriesEventParams = {
@@ -24,6 +29,7 @@ export default function Chart2D({
   visibleIndices,
   activeDiveIndex,
   onActiveDiveChange,
+  groupingConfig,
 }: Chart2DProps) {
   const { series, chartMode, aggregationMetric } = processed;
   const isBarChart = chartMode === "bar";
@@ -187,13 +193,16 @@ export default function Chart2D({
         borderWidth: 1,
         textStyle: { color: "#e6edf3", fontSize: 12 },
       },
-      legend: {
-        data: series.map((s) => s.label),
-        textStyle: { color: "#8b949e", fontSize: 11 },
-        top: 8,
-        type: "scroll",
-        pageTextStyle: { color: "#8b949e" },
-      },
+      legend:
+        groupingConfig.groupMode === "none"
+          ? undefined
+          : {
+              data: series.map((s) => s.label),
+              textStyle: { color: "#8b949e", fontSize: 11 },
+              top: 4,
+              type: "scroll",
+              pageTextStyle: { color: "#8b949e" },
+            },
       grid: {
         left: 60,
         right: 24,
