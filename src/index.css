@@ -201,12 +201,102 @@ body,
 .grouping-controls {
   flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
+  flex-direction: column;
+  gap: 8px;
   padding: 10px 14px;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
+}
+
+.grouping-presets {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.grouping-preset-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.grouping-preset-list button {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.grouping-preset-list button.preset-thermocline {
+  color: #9bd4f5;
+  border-color: rgba(155, 212, 245, 0.35);
+  background: rgba(155, 212, 245, 0.08);
+}
+
+.grouping-preset-list button.preset-thermocline.active {
+  color: #d4efff;
+  border-color: rgba(155, 212, 245, 0.6);
+  background: rgba(155, 212, 245, 0.22);
+}
+
+.grouping-preset-list button.preset-thermocline:hover:not(.active) {
+  color: #c5e8ff;
+  background: rgba(155, 212, 245, 0.14);
+}
+
+.grouping-preset-list button.preset-distance-by-discipline {
+  color: #e3b341;
+  border-color: rgba(227, 179, 65, 0.35);
+  background: rgba(227, 179, 65, 0.08);
+}
+
+.grouping-preset-list button.preset-distance-by-discipline.active {
+  color: #f0cc62;
+  border-color: rgba(227, 179, 65, 0.6);
+  background: rgba(227, 179, 65, 0.22);
+}
+
+.grouping-preset-list button.preset-distance-by-discipline:hover:not(.active) {
+  color: #ecc558;
+  background: rgba(227, 179, 65, 0.14);
+}
+
+.grouping-preset-list button.preset-deepest-by-month {
+  color: #f85149;
+  border-color: rgba(248, 81, 73, 0.35);
+  background: rgba(248, 81, 73, 0.08);
+}
+
+.grouping-preset-list button.preset-deepest-by-month.active {
+  color: #ff7b72;
+  border-color: rgba(248, 81, 73, 0.6);
+  background: rgba(248, 81, 73, 0.22);
+}
+
+.grouping-preset-list button.preset-deepest-by-month:hover:not(.active) {
+  color: #ff6e66;
+  background: rgba(248, 81, 73, 0.14);
+}
+
+.grouping-manual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
 }
 
 .grouping-row {

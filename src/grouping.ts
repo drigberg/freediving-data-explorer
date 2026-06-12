@@ -62,6 +62,77 @@ export function defaultGroupingConfig(): GroupingConfig {
   };
 }
 
+export interface GroupingPreset {
+  id: string;
+  label: string;
+  config: GroupingConfig;
+}
+
+export const GROUPING_PRESETS: GroupingPreset[] = [
+  {
+    id: "thermocline",
+    label: "Average dive by thermocline",
+    config: {
+      groupMode: "temperature",
+      dateIntervalUnit: "month",
+      temperatureIncrement: 5,
+      temperatureMode: "difference",
+      displayMode: "average",
+      maximumCriterion: "longest",
+      aggregationMode: "none",
+    },
+  },
+  {
+    id: "distance-by-discipline",
+    label: "Total vertical distance swum by discipline",
+    config: {
+      groupMode: "discipline",
+      dateIntervalUnit: "month",
+      temperatureIncrement: 5,
+      temperatureMode: "max",
+      displayMode: "average",
+      maximumCriterion: "longest",
+      aggregationMode: "distance",
+    },
+  },
+  {
+    id: "deepest-by-month",
+    label: "Deepest dive by month",
+    config: {
+      groupMode: "dateInterval",
+      dateIntervalUnit: "month",
+      temperatureIncrement: 5,
+      temperatureMode: "max",
+      displayMode: "maximum",
+      maximumCriterion: "deepest",
+      aggregationMode: "none",
+    },
+  },
+];
+
+export function groupingConfigsEqual(
+  a: GroupingConfig,
+  b: GroupingConfig,
+): boolean {
+  return (
+    a.groupMode === b.groupMode &&
+    a.dateIntervalUnit === b.dateIntervalUnit &&
+    a.temperatureIncrement === b.temperatureIncrement &&
+    a.temperatureMode === b.temperatureMode &&
+    a.displayMode === b.displayMode &&
+    a.maximumCriterion === b.maximumCriterion &&
+    a.aggregationMode === b.aggregationMode
+  );
+}
+
+export function matchingGroupingPreset(
+  config: GroupingConfig,
+): GroupingPreset | undefined {
+  return GROUPING_PRESETS.find((preset) =>
+    groupingConfigsEqual(config, preset.config),
+  );
+}
+
 // ── Helpers ──
 
 function parseDate(seriesName: string): Date | null {
