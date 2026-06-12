@@ -20,7 +20,7 @@ import {
   hasActiveFilters,
   type DiveFilterConfig,
 } from "./filters";
-import type { Tag } from "./grouping";
+import type { GroupingConfig, Tag } from "./grouping";
 
 interface SidebarProps {
   seriesNames: string[];
@@ -40,6 +40,7 @@ interface SidebarProps {
   onExposureSuitAssign: (indices: number[], suit: ExposureSuit) => void;
   onArchiveDive: (index: number) => void;
   diveFilters: DiveFilterConfig;
+  groupingConfig: GroupingConfig;
 }
 
 type AssignMode =
@@ -187,6 +188,7 @@ export default function Sidebar({
   onExposureSuitAssign,
   onArchiveDive,
   diveFilters,
+  groupingConfig,
 }: SidebarProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
@@ -199,6 +201,7 @@ export default function Sidebar({
 
   useEffect(() => {
     if (activeDiveIndex == null) return;
+    if (groupingConfig.groupMode !== "none") return;
 
     const dateKey = extractDateKey(seriesNames[activeDiveIndex]);
     if (dateKey) {
@@ -548,12 +551,16 @@ export default function Sidebar({
           const isCollapsed = collapsedDates.has(collapseKey);
 
           return (
-            <Fragment key={`${excluded ? "excluded-" : ""}${dateGroup.dateKey}`}>
+            <Fragment
+              key={`${excluded ? "excluded-" : ""}${dateGroup.dateKey}`}
+            >
               <li
                 className={`sidebar-date-header clickable${excluded ? " filter-excluded" : ""}${isCollapsed ? " collapsed" : ""}`}
                 onClick={() => toggleDateCollapsed(collapseKey)}
               >
-                <span className="sidebar-date-label">{dateGroup.dateLabel}</span>
+                <span className="sidebar-date-label">
+                  {dateGroup.dateLabel}
+                </span>
                 <span className="date-toggle-label">
                   {isCollapsed ? "show" : "hide"}
                 </span>

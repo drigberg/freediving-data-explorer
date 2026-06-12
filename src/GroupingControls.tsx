@@ -58,7 +58,12 @@ export default function GroupingControls({
             "exposureSuit",
           ]}
           value={config.groupMode}
-          onChange={(groupMode) => update({ groupMode })}
+          onChange={(groupMode) =>
+            update({
+              groupMode,
+              ...(groupMode === "none" ? { aggregationMode: "none" } : {}),
+            })
+          }
           labels={{
             none: "None",
             dateInterval: "Date interval",

@@ -239,6 +239,7 @@ export default function App() {
       )}
       <div className="app-body">
         <Sidebar
+          groupingConfig={groupingConfig}
           seriesNames={data.seriesNames}
           diveNumbers={data.diveNumbers}
           seriesData={data.seriesData}
