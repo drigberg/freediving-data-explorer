@@ -17,7 +17,7 @@ export type GroupMode =
   | "weight"
   | "exposureSuit"
   | "temperature";
-export type DateIntervalUnit = "month" | "quarter" | "year";
+export type DateIntervalUnit = "day" | "month" | "quarter" | "year";
 export type TemperatureIncrement = 1 | 5 | 10;
 export type TemperatureMode = "max" | "min" | "difference";
 export type DisplayMode = "average" | "maximum";
@@ -108,6 +108,19 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
     filters: (disciplines) => ({
       disciplines: disciplines.filter((d) => !isSafetyDynbDiscipline(d)),
     }),
+  },
+  {
+    id: "longest-dive-by-day",
+    label: "Longest dive per day",
+    config: {
+      groupMode: "dateInterval",
+      dateIntervalUnit: "day",
+      temperatureIncrement: 5,
+      temperatureMode: "difference",
+      displayMode: "maximum",
+      maximumCriterion: "longest",
+      aggregationMode: "none",
+    },
   },
   {
     id: "thermocline",
@@ -213,6 +226,8 @@ function dateIntervalKey(date: Date, unit: DateIntervalUnit): string {
   const y = date.getFullYear();
   const m = date.getMonth();
   switch (unit) {
+    case "day":
+      return `${y}-${m + 1}-${date.getDate()}`;
     case "month": {
       const months = [
         "Jan",
