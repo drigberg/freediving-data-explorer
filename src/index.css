@@ -257,6 +257,23 @@ body,
   transition: all 0.15s ease;
 }
 
+.grouping-preset-list button.preset-personal-bests {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.35);
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.grouping-preset-list button.preset-personal-bests.active {
+  color: #56d364;
+  border-color: rgba(63, 185, 80, 0.6);
+  background: rgba(63, 185, 80, 0.22);
+}
+
+.grouping-preset-list button.preset-personal-bests:hover:not(.active) {
+  color: #4ac959;
+  background: rgba(63, 185, 80, 0.14);
+}
+
 .grouping-preset-list button.preset-thermocline {
   color: #9bd4f5;
   border-color: rgba(155, 212, 245, 0.35);

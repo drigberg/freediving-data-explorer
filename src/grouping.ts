@@ -70,6 +70,19 @@ export interface GroupingPreset {
 
 export const GROUPING_PRESETS: GroupingPreset[] = [
   {
+    id: "personal-bests",
+    label: "Current personal bests",
+    config: {
+      groupMode: "discipline",
+      dateIntervalUnit: "month",
+      temperatureIncrement: 5,
+      temperatureMode: "difference",
+      displayMode: "maximum",
+      maximumCriterion: "deepest",
+      aggregationMode: "none",
+    },
+  },
+  {
     id: "thermocline",
     label: "Average dive by thermocline",
     config: {
