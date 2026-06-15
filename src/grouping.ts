@@ -1,4 +1,4 @@
-import { isSafetyDynbDiscipline } from "./disciplines";
+import { getDisciplineColor, isSafetyDynbDiscipline } from "./disciplines";
 import {
   defaultDiveFilters,
   diveFiltersEqual,
@@ -49,6 +49,8 @@ export interface ProcessedSeries {
   primaryDiveIndex: number;
   /** Filtered DiveData indices represented by this series. */
   diveIndices: number[];
+  /** Discipline-based line/bar color when applicable. */
+  color?: string;
 }
 
 export interface ProcessedData {
@@ -510,6 +512,32 @@ function ensureTrailingZero(points: [number, number][]): [number, number][] {
   return points;
 }
 
+function disciplineFromGroupLabel(label: string): string | undefined {
+  return label === "(Unknown)" ? undefined : label;
+}
+
+function usesDisciplineColors(config: GroupingConfig): boolean {
+  if (config.groupMode === "none" || config.groupMode === "discipline") {
+    return true;
+  }
+  return (
+    config.groupMode === "dateInterval" && config.displayMode === "maximum"
+  );
+}
+
+function seriesDisciplineColor(
+  data: DiveData,
+  config: GroupingConfig,
+  group: Group,
+  primaryDiveIndex: number,
+): string | undefined {
+  if (!usesDisciplineColors(config)) return undefined;
+  if (config.groupMode === "discipline") {
+    return getDisciplineColor(disciplineFromGroupLabel(group.label));
+  }
+  return getDisciplineColor(data.disciplines[primaryDiveIndex]);
+}
+
 // ── Main processing ──
 
 function resolveGroups(data: DiveData, config: GroupingConfig): Group[] {
@@ -568,6 +596,10 @@ function processAggregatedData(
     ),
     primaryDiveIndex: Math.max(...group.indices),
     diveIndices: group.indices,
+    color:
+      config.groupMode === "discipline"
+        ? getDisciplineColor(disciplineFromGroupLabel(group.label))
+        : undefined,
   }));
 
   return { chartMode: "bar", aggregationMetric: metric, series };
@@ -589,6 +621,7 @@ export function processData(
         data: stripTemp(data.seriesData[i]),
         primaryDiveIndex: i,
         diveIndices: [i],
+        color: getDisciplineColor(data.disciplines[i]),
       })),
     };
   }
@@ -620,6 +653,7 @@ export function processData(
       data: ensureTrailingZero(seriesPoints),
       primaryDiveIndex,
       diveIndices: group.indices,
+      color: seriesDisciplineColor(data, config, group, primaryDiveIndex),
     };
   });
 

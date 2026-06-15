@@ -6,7 +6,7 @@ import {
   GroupingConfig,
   type ProcessedData,
 } from "./grouping";
-import { getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
+import { colorWithAlpha, getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
 
 interface Chart2DProps {
   processed: ProcessedData;
@@ -106,6 +106,16 @@ export default function Chart2D({
   const option = useMemo<EChartsOption>(() => {
     const total = series.length;
 
+    const resolveColor = (i: number) =>
+      series[i].color ?? getSeriesColor(i, total);
+
+    const resolveShadowColor = (i: number, alpha = 0.25) => {
+      const color = series[i].color;
+      return color
+        ? colorWithAlpha(color, alpha)
+        : getSeriesColorRgba(i, total, alpha);
+    };
+
     if (isBarChart) {
       const yAxisName =
         aggregationMetric === "duration"
@@ -158,9 +168,7 @@ export default function Chart2D({
             type: "bar" as const,
             data: series.map((s, i) => {
               const isActive = i === clampedActive;
-              const color = isActive
-                ? ACTIVE_LINE_COLOR
-                : getSeriesColor(i, total);
+              const color = resolveColor(i);
               return {
                 value: s.aggregationValue ?? 0,
                 itemStyle: {
@@ -170,7 +178,7 @@ export default function Chart2D({
                     : getSeriesOpacity(i, clampedActive, total),
                   shadowBlur: isActive ? 12 : 0,
                   shadowColor: isActive
-                    ? "rgba(255, 255, 255, 0.45)"
+                    ? resolveShadowColor(i, 0.45)
                     : undefined,
                 },
               };
@@ -232,7 +240,8 @@ export default function Chart2D({
       series: series.map((s, i) => {
         const opacity = getSeriesOpacity(i, clampedActive, total);
         const isActive = i === clampedActive;
-        const color = isActive ? ACTIVE_LINE_COLOR : getSeriesColor(i, total);
+        const color = resolveColor(i);
+        const shadowColor = resolveShadowColor(i);
 
         return {
           name: s.label,
@@ -247,9 +256,7 @@ export default function Chart2D({
             color,
             opacity: isActive ? 1 : opacity,
             shadowBlur: isActive ? 16 : 8,
-            shadowColor: isActive
-              ? "rgba(255, 255, 255, 0.6)"
-              : getSeriesColorRgba(i, total, 0.25),
+            shadowColor,
           },
           ...(isActive && {
             areaStyle: {
@@ -260,8 +267,8 @@ export default function Chart2D({
                 x2: 0,
                 y2: 1,
                 colorStops: [
-                  { offset: 0, color: "rgba(255, 255, 255, 0.2)" },
-                  { offset: 1, color: "rgba(255, 255, 255, 0)" },
+                  { offset: 0, color: resolveShadowColor(i, 0.2) },
+                  { offset: 1, color: resolveShadowColor(i, 0) },
                 ],
               },
             },

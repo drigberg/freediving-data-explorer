@@ -19,6 +19,13 @@ export function getSeriesColorRgba(
   return `hsla(${seriesHue(index, total)}, 100%, 50%, ${alpha})`;
 }
 
+export function colorWithAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 /**
  * Computes opacity based on distance from the active series index.
  * Active series = 1.0, farthest series = 0.2 (minimum).

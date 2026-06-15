@@ -29,6 +29,22 @@ const DISCIPLINE_CSS_SLUG: Record<string, string> = {
   [SAFETY_DYNB_DISCIPLINE]: "safety-dynb",
 };
 
+export const DISCIPLINE_COLORS: Record<string, string> = {
+  "Free Immersion": "#a371f7",
+  "No-Fins": "#3fb950",
+  "Bi-Fins": "#58a6ff",
+  "Mono-Fin": "#56d4dd",
+  "Variable Weight": "#f778ba",
+  [SAFETY_DYNB_DISCIPLINE]: "#e3b341",
+};
+
+export const UNKNOWN_DISCIPLINE_COLOR = "#8b949e";
+
+export function getDisciplineColor(discipline: string | undefined): string {
+  if (!discipline) return UNKNOWN_DISCIPLINE_COLOR;
+  return DISCIPLINE_COLORS[discipline] ?? UNKNOWN_DISCIPLINE_COLOR;
+}
+
 export function disciplineAbbrev(discipline: string): string {
   return DISCIPLINE_ABBREV[discipline] ?? discipline;
 }
