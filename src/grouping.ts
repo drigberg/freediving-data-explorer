@@ -1,3 +1,10 @@
+import { isSafetyDynbDiscipline } from "./disciplines";
+import {
+  defaultDiveFilters,
+  diveFiltersEqual,
+  filtersForPreset,
+  type DiveFilterConfig,
+} from "./filters";
 import type { DiveData, ProfilePoint } from "./parseData";
 import { formatExposureSuit } from "./parseData";
 
@@ -62,10 +69,27 @@ export function defaultGroupingConfig(): GroupingConfig {
   };
 }
 
+export type PresetFilterDefinition =
+  | Partial<DiveFilterConfig>
+  | ((availableDisciplines: string[]) => Partial<DiveFilterConfig>);
+
 export interface GroupingPreset {
   id: string;
   label: string;
   config: GroupingConfig;
+  filters?: PresetFilterDefinition;
+}
+
+export function resolvePresetFilters(
+  definition: PresetFilterDefinition | undefined,
+  availableDisciplines: string[],
+): DiveFilterConfig {
+  if (definition === undefined) return defaultDiveFilters();
+  const partial =
+    typeof definition === "function"
+      ? definition(availableDisciplines)
+      : definition;
+  return filtersForPreset(partial);
 }
 
 export const GROUPING_PRESETS: GroupingPreset[] = [
@@ -81,6 +105,9 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       maximumCriterion: "deepest",
       aggregationMode: "none",
     },
+    filters: (disciplines) => ({
+      disciplines: disciplines.filter((d) => !isSafetyDynbDiscipline(d)),
+    }),
   },
   {
     id: "thermocline",
@@ -140,10 +167,19 @@ export function groupingConfigsEqual(
 
 export function matchingGroupingPreset(
   config: GroupingConfig,
+  filters: DiveFilterConfig,
+  availableDisciplines: string[],
 ): GroupingPreset | undefined {
-  return GROUPING_PRESETS.find((preset) =>
-    groupingConfigsEqual(config, preset.config),
-  );
+  return GROUPING_PRESETS.find((preset) => {
+    if (!groupingConfigsEqual(config, preset.config)) return false;
+    if (preset.filters !== undefined) {
+      return diveFiltersEqual(
+        filters,
+        resolvePresetFilters(preset.filters, availableDisciplines),
+      );
+    }
+    return true;
+  });
 }
 
 // ── Helpers ──

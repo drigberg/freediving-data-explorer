@@ -43,6 +43,45 @@ export function defaultDiveFilters(): DiveFilterConfig {
   };
 }
 
+export function filtersForPreset(
+  partial?: Partial<DiveFilterConfig>,
+): DiveFilterConfig {
+  return { ...defaultDiveFilters(), ...partial };
+}
+
+function stringArraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((value, index) => value === sortedB[index]);
+}
+
+function numberArraysEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  const sortedA = [...a].sort((x, y) => x - y);
+  const sortedB = [...b].sort((x, y) => x - y);
+  return sortedA.every((value, index) => value === sortedB[index]);
+}
+
+function intRangesEqual(a: NullableIntRange, b: NullableIntRange): boolean {
+  return a.min === b.min && a.max === b.max;
+}
+
+export function diveFiltersEqual(
+  a: DiveFilterConfig,
+  b: DiveFilterConfig,
+): boolean {
+  return (
+    stringArraysEqual(a.disciplines, b.disciplines) &&
+    numberArraysEqual(a.weights, b.weights) &&
+    stringArraysEqual(a.exposureSuits, b.exposureSuits) &&
+    a.dateFrom === b.dateFrom &&
+    a.dateTo === b.dateTo &&
+    intRangesEqual(a.duration, b.duration) &&
+    intRangesEqual(a.maxDepth, b.maxDepth)
+  );
+}
+
 function diveDurationSeconds(points: ProfilePoint[]): number {
   if (points.length === 0) return 0;
   return Math.round(points[points.length - 1][0] - points[0][0]);
@@ -132,8 +171,8 @@ export function divePassesFilters(
   index: number,
   filters: DiveFilterConfig,
 ): boolean {
+  const discipline = data.disciplines[index];
   if (filters.disciplines.length > 0) {
-    const discipline = data.disciplines[index];
     if (!discipline || !filters.disciplines.includes(discipline)) {
       return false;
     }

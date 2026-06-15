@@ -1,6 +1,7 @@
 import {
   GROUPING_PRESETS,
   matchingGroupingPreset,
+  resolvePresetFilters,
   type GroupingConfig,
   type GroupMode,
   type DateIntervalUnit,
@@ -10,10 +11,14 @@ import {
   type RankCriterion,
   type AggregationMode,
 } from "./grouping";
+import type { DiveFilterConfig } from "./filters";
 
 interface GroupingControlsProps {
   config: GroupingConfig;
+  filters: DiveFilterConfig;
+  availableDisciplines: string[];
   onChange: (config: GroupingConfig) => void;
+  onFiltersChange: (filters: DiveFilterConfig) => void;
 }
 
 function SegmentButtons<T extends string | number>({
@@ -44,11 +49,18 @@ function SegmentButtons<T extends string | number>({
 
 export default function GroupingControls({
   config,
+  filters,
+  availableDisciplines,
   onChange,
+  onFiltersChange,
 }: GroupingControlsProps) {
   const update = (patch: Partial<GroupingConfig>) =>
     onChange({ ...config, ...patch });
-  const activePreset = matchingGroupingPreset(config);
+  const activePreset = matchingGroupingPreset(
+    config,
+    filters,
+    availableDisciplines,
+  );
 
   return (
     <div className="grouping-controls">
@@ -60,7 +72,12 @@ export default function GroupingControls({
               <button
                 type="button"
                 className={`preset-${preset.id}${activePreset?.id === preset.id ? " active" : ""}`}
-                onClick={() => onChange(preset.config)}
+                onClick={() => {
+                  onChange(preset.config);
+                  onFiltersChange(
+                    resolvePresetFilters(preset.filters, availableDisciplines),
+                  );
+                }}
               >
                 {preset.label}
               </button>

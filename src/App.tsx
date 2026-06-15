@@ -227,7 +227,13 @@ export default function App() {
           />
         </div>
       </header>
-      <GroupingControls config={groupingConfig} onChange={setGroupingConfig} />
+      <GroupingControls
+        config={groupingConfig}
+        filters={diveFilters}
+        availableDisciplines={filterOptions?.disciplines ?? []}
+        onChange={setGroupingConfig}
+        onFiltersChange={setDiveFilters}
+      />
       {filterOptions && (
         <FilterControls
           filters={diveFilters}
