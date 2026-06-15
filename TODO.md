@@ -1,8 +1,5 @@
-- Allow selecting dive by clicking on the line in the chart
-- Allow archiving a dive, and add an option to only show archived dives
+- Add list/table view for dives
+- Color-code dives by discipline, with narrow hue ranges
+- Add an option to view all archived dives
 - Allow removing tags from dives
-- Allow grouping by:
-  - Temperature
-  - Has tag (list of all other tags)
-- Show temperature on the graph
 - Ascent and descent speed graph
