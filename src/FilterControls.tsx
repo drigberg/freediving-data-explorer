@@ -1,4 +1,4 @@
-import { disciplineAbbrev } from "./disciplines";
+import { disciplineAbbrev, disciplineFilterChipClass } from "./disciplines";
 import type { DiveFilterConfig, DiveFilterOptions } from "./filters";
 import { defaultDiveFilters, hasActiveFilters } from "./filters";
 
@@ -27,26 +27,34 @@ function FilterChips({
   selected,
   onToggle,
   formatLabel,
+  chipClassName,
 }: {
   values: string[];
   selected: string[];
   onToggle: (value: string) => void;
   formatLabel?: (value: string) => string;
+  chipClassName?: (value: string) => string;
 }) {
   if (values.length === 0) return null;
 
   return (
     <div className="filter-chips">
-      {values.map((value) => (
-        <button
-          key={value}
-          type="button"
-          className={selected.includes(value) ? "active" : ""}
-          onClick={() => onToggle(value)}
-        >
-          {formatLabel ? formatLabel(value) : value}
-        </button>
-      ))}
+      {values.map((value) => {
+        const isActive = selected.includes(value);
+        const extraClass = chipClassName?.(value) ?? "";
+        return (
+          <button
+            key={value}
+            type="button"
+            className={[extraClass, isActive ? "active" : ""]
+              .filter(Boolean)
+              .join(" ")}
+            onClick={() => onToggle(value)}
+          >
+            {formatLabel ? formatLabel(value) : value}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -80,6 +88,7 @@ export default function FilterControls({
                   })
                 }
                 formatLabel={disciplineAbbrev}
+                chipClassName={disciplineFilterChipClass}
               />
             </>
           )}

@@ -12,7 +12,11 @@ import DisciplineDialog from "./DisciplineDialog";
 import WeightDialog from "./WeightDialog";
 import ExposureSuitDialog from "./ExposureSuitDialog";
 import EditDialog from "./AddTagDialog";
-import { disciplineAbbrev, isSafetyDynbDiscipline } from "./disciplines";
+import {
+  disciplineAbbrev,
+  disciplineDetailClass,
+  disciplineTagClass,
+} from "./disciplines";
 import type { ExposureSuit, ProfilePoint } from "./parseData";
 import { extractDateKey, formatExposureSuit } from "./parseData";
 import {
@@ -414,9 +418,7 @@ export default function Sidebar({
     const isHidden = hiddenDives.has(i);
     const isSelected = selection.has(i);
     const discipline = disciplines[i];
-    const disciplineClass = discipline
-      ? `dive-discipline${isSafetyDynbDiscipline(discipline) ? " safety-dynb-discipline" : ""}`
-      : "";
+    const disciplineClass = discipline ? disciplineTagClass(discipline) : "";
     const mutedClass = excluded ? " filter-excluded" : "";
     const points = seriesData[i];
     const maxDepth =
@@ -494,9 +496,7 @@ export default function Sidebar({
               Duration: {formatDuration(duration)}
             </li>
             {discipline && (
-              <li
-                className={`dive-detail-item${isSafetyDynbDiscipline(discipline) ? " safety-dynb-discipline" : ""}`}
-              >
+              <li className={disciplineDetailClass(discipline)}>
                 Discipline: {discipline}
               </li>
             )}

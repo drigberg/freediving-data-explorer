@@ -160,6 +160,102 @@ body,
   background: rgba(255, 255, 255, 0.06);
 }
 
+.filter-chips button.discipline-fi {
+  color: #a371f7;
+  border-color: rgba(163, 113, 247, 0.35);
+}
+
+.filter-chips button.discipline-fi.active {
+  background: rgba(163, 113, 247, 0.15);
+  border-color: rgba(163, 113, 247, 0.45);
+  color: #a371f7;
+}
+
+.filter-chips button.discipline-fi:hover:not(.active) {
+  background: rgba(163, 113, 247, 0.1);
+  color: #a371f7;
+}
+
+.filter-chips button.discipline-cwtb {
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.35);
+}
+
+.filter-chips button.discipline-cwtb.active {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: rgba(88, 166, 255, 0.45);
+  color: #58a6ff;
+}
+
+.filter-chips button.discipline-cwtb:hover:not(.active) {
+  background: rgba(88, 166, 255, 0.1);
+  color: #58a6ff;
+}
+
+.filter-chips button.discipline-cwt {
+  color: #56d4dd;
+  border-color: rgba(86, 212, 221, 0.35);
+}
+
+.filter-chips button.discipline-cwt.active {
+  background: rgba(86, 212, 221, 0.15);
+  border-color: rgba(86, 212, 221, 0.45);
+  color: #56d4dd;
+}
+
+.filter-chips button.discipline-cwt:hover:not(.active) {
+  background: rgba(86, 212, 221, 0.1);
+  color: #56d4dd;
+}
+
+.filter-chips button.discipline-cnf {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.35);
+}
+
+.filter-chips button.discipline-cnf.active {
+  background: rgba(63, 185, 80, 0.15);
+  border-color: rgba(63, 185, 80, 0.45);
+  color: #3fb950;
+}
+
+.filter-chips button.discipline-cnf:hover:not(.active) {
+  background: rgba(63, 185, 80, 0.1);
+  color: #3fb950;
+}
+
+.filter-chips button.discipline-vwt {
+  color: #f778ba;
+  border-color: rgba(247, 120, 186, 0.35);
+}
+
+.filter-chips button.discipline-vwt.active {
+  background: rgba(247, 120, 186, 0.15);
+  border-color: rgba(247, 120, 186, 0.45);
+  color: #f778ba;
+}
+
+.filter-chips button.discipline-vwt:hover:not(.active) {
+  background: rgba(247, 120, 186, 0.1);
+  color: #f778ba;
+}
+
+.filter-chips button.discipline-safety-dynb {
+  color: #e3b341;
+  border-color: rgba(227, 179, 65, 0.35);
+}
+
+.filter-chips button.discipline-safety-dynb.active {
+  background: rgba(227, 179, 65, 0.15);
+  border-color: rgba(227, 179, 65, 0.45);
+  color: #e3b341;
+}
+
+.filter-chips button.discipline-safety-dynb:hover:not(.active) {
+  background: rgba(227, 179, 65, 0.1);
+  color: #e3b341;
+}
+
 .filter-date-input {
   padding: 4px 8px;
   font-size: 0.75rem;
@@ -798,11 +894,56 @@ body,
   flex-shrink: 0;
   font-size: 0.65rem;
   font-weight: 600;
-  color: #58a6ff;
-  background: rgba(88, 166, 255, 0.1);
+  color: #8b949e;
+  background: rgba(139, 148, 158, 0.12);
   padding: 1px 5px;
   border-radius: 3px;
   letter-spacing: 0.03em;
+}
+
+.dive-discipline.discipline-fi,
+.dive-detail-item.discipline-fi {
+  color: #a371f7;
+}
+
+.dive-discipline.discipline-fi {
+  background: rgba(163, 113, 247, 0.15);
+}
+
+.dive-discipline.discipline-cwtb,
+.dive-detail-item.discipline-cwtb {
+  color: #58a6ff;
+}
+
+.dive-discipline.discipline-cwtb {
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.dive-discipline.discipline-cwt,
+.dive-detail-item.discipline-cwt {
+  color: #56d4dd;
+}
+
+.dive-discipline.discipline-cwt {
+  background: rgba(86, 212, 221, 0.15);
+}
+
+.dive-discipline.discipline-cnf,
+.dive-detail-item.discipline-cnf {
+  color: #3fb950;
+}
+
+.dive-discipline.discipline-cnf {
+  background: rgba(63, 185, 80, 0.15);
+}
+
+.dive-discipline.discipline-vwt,
+.dive-detail-item.discipline-vwt {
+  color: #f778ba;
+}
+
+.dive-discipline.discipline-vwt {
+  background: rgba(247, 120, 186, 0.15);
 }
 
 .dive-discipline.safety-dynb-discipline,
@@ -812,6 +953,56 @@ body,
 
 .dive-discipline.safety-dynb-discipline {
   background: rgba(227, 179, 65, 0.15);
+}
+
+.discipline-options .tag-option.discipline-fi {
+  color: #a371f7;
+  border-color: rgba(163, 113, 247, 0.4);
+}
+
+.discipline-options .tag-option.discipline-fi:hover {
+  background: rgba(163, 113, 247, 0.12);
+  border-color: #a371f7;
+}
+
+.discipline-options .tag-option.discipline-cwtb {
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.4);
+}
+
+.discipline-options .tag-option.discipline-cwtb:hover {
+  background: rgba(88, 166, 255, 0.12);
+  border-color: #58a6ff;
+}
+
+.discipline-options .tag-option.discipline-cwt {
+  color: #56d4dd;
+  border-color: rgba(86, 212, 221, 0.4);
+}
+
+.discipline-options .tag-option.discipline-cwt:hover {
+  background: rgba(86, 212, 221, 0.12);
+  border-color: #56d4dd;
+}
+
+.discipline-options .tag-option.discipline-cnf {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.4);
+}
+
+.discipline-options .tag-option.discipline-cnf:hover {
+  background: rgba(63, 185, 80, 0.12);
+  border-color: #3fb950;
+}
+
+.discipline-options .tag-option.discipline-vwt {
+  color: #f778ba;
+  border-color: rgba(247, 120, 186, 0.4);
+}
+
+.discipline-options .tag-option.discipline-vwt:hover {
+  background: rgba(247, 120, 186, 0.12);
+  border-color: #f778ba;
 }
 
 .discipline-options .tag-option.safety-dynb-option {
