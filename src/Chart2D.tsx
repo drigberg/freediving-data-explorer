@@ -306,18 +306,6 @@ export default function Chart2D({
 
   return (
     <div className="chart-container">
-      <div
-        className={`chart-plot${!isBarChart && hoveringLine ? " chart-plot--hover-line" : ""}`}
-      >
-        <ReactECharts
-          option={option}
-          notMerge={true}
-          style={{ height: "100%", width: "100%" }}
-          opts={{ renderer: "canvas" }}
-          theme="dark"
-          onEvents={chartEvents}
-        />
-      </div>
       <div className="slider-container">
         <label className="slider-label">
           Active: <strong>{activeSeries.label}</strong>
@@ -337,6 +325,18 @@ export default function Chart2D({
           <span>{series[0].label}</span>
           <span>{series[series.length - 1].label}</span>
         </div>
+      </div>
+      <div
+        className={`chart-plot${!isBarChart && hoveringLine ? " chart-plot--hover-line" : ""}`}
+      >
+        <ReactECharts
+          option={option}
+          notMerge={true}
+          style={{ height: "100%", width: "100%" }}
+          opts={{ renderer: "canvas" }}
+          theme="dark"
+          onEvents={chartEvents}
+        />
       </div>
     </div>
   );
