@@ -64,26 +64,30 @@ export default function GroupingControls({
 
   return (
     <div className="grouping-controls">
-      <div className="grouping-presets">
-        <span className="grouping-label">Presets</span>
-        <ul className="grouping-preset-list">
+      <div className="grouping-row">
+        <span className="grouping-label">Preset</span>
+        <select
+          className="grouping-preset-select"
+          value={activePreset?.id ?? ""}
+          onChange={(e) => {
+            const presetId = e.target.value;
+            e.target.blur();
+            if (!presetId) return;
+            const preset = GROUPING_PRESETS.find((p) => p.id === presetId);
+            if (!preset) return;
+            onChange(preset.config);
+            onFiltersChange(
+              resolvePresetFilters(preset.filters, availableDisciplines),
+            );
+          }}
+        >
+          <option value="">Custom</option>
           {GROUPING_PRESETS.map((preset) => (
-            <li key={preset.id}>
-              <button
-                type="button"
-                className={`preset-${preset.id}${activePreset?.id === preset.id ? " active" : ""}`}
-                onClick={() => {
-                  onChange(preset.config);
-                  onFiltersChange(
-                    resolvePresetFilters(preset.filters, availableDisciplines),
-                  );
-                }}
-              >
-                {preset.label}
-              </button>
-            </li>
+            <option key={preset.id} value={preset.id}>
+              {preset.label}
+            </option>
           ))}
-        </ul>
+        </select>
       </div>
 
       <div className="grouping-manual">
