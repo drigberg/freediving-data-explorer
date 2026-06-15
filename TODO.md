@@ -1,5 +1,17 @@
-- Add list/table view for dives
 - Color-code dives by discipline, with narrow hue ranges
-- Add an option to view all archived dives
-- Allow removing tags from dives
-- Ascent and descent speed graph
+- Allow editing and removing tags for dives
+- "Add discipline" button for individual dives
+- List/table mode
+  - Toggle for archived dives
+- Timeline mode:
+  - Time interval: day/month/quarter/year
+  - Group by:
+    - Discipline
+    - Exposure suit
+  - Aggregation:
+    - Longest
+    - Deepest
+- Dive detail mode
+  - Graph one dive, with depth and temperature
+  - Include temperature
+  - Toggle to switch between depth and ascent speed
