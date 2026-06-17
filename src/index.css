@@ -1349,6 +1349,27 @@ body,
 .chart-container--single {
   padding: 12px;
   gap: 0;
+  position: relative;
+}
+
+.chart-single-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+.chart-metric-toggle {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(13, 17, 23, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.chart-metric-toggle button {
+  padding: 4px 10px;
+  font-size: 0.72rem;
 }
 
 .chart-container--single .chart-plot {

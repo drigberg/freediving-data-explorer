@@ -7,6 +7,7 @@ import {
   type ProcessedData,
 } from "./grouping";
 import { colorWithAlpha, getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
+import { computeVelocitySeries } from "./diveStats";
 
 interface Chart2DProps {
   processed: ProcessedData;
@@ -25,6 +26,8 @@ type SeriesEventParams = {
 
 const ACTIVE_LINE_COLOR = "#ffffff";
 
+type SingleDiveMetric = "depth" | "speed";
+
 export default function Chart2D({
   processed,
   visibleIndices,
@@ -38,6 +41,8 @@ export default function Chart2D({
   const isBarChart = chartMode === "bar";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
+  const [singleDiveMetric, setSingleDiveMetric] =
+    useState<SingleDiveMetric>("depth");
 
   useEffect(() => {
     setActiveIndex(series.length - 1);
@@ -122,6 +127,11 @@ export default function Chart2D({
     if (isSingleDive) {
       const color = resolveColor(0);
       const shadowColor = resolveShadowColor(0);
+      const depthData = series[0]?.data ?? [];
+      const showSpeed = singleDiveMetric === "speed";
+      const primaryData = showSpeed
+        ? computeVelocitySeries(depthData)
+        : depthData;
 
       return {
         backgroundColor: "transparent",
@@ -131,11 +141,17 @@ export default function Chart2D({
           borderColor: "rgba(255, 255, 255, 0.12)",
           borderWidth: 1,
           textStyle: { color: "#e6edf3", fontSize: 12 },
+          valueFormatter: (value) => {
+            if (typeof value !== "number") return String(value ?? "");
+            return showSpeed
+              ? `${value.toFixed(2)} m/s`
+              : `${Math.abs(value).toFixed(1)} m`;
+          },
         },
         grid: {
           left: 52,
           right: 16,
-          top: 16,
+          top: 44,
           bottom: 36,
         },
         xAxis: {
@@ -147,14 +163,19 @@ export default function Chart2D({
         yAxis: {
           type: "value",
           axisLine: { lineStyle: { color: "#30363d" } },
-          axisLabel: { color: "#8b949e" },
+          axisLabel: {
+            color: "#8b949e",
+            formatter: showSpeed
+              ? (value: number) => `${value.toFixed(1)}`
+              : undefined,
+          },
           splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
         },
         series: [
           {
             type: "line" as const,
-            data: series[0]?.data ?? [],
-            smooth: true,
+            data: primaryData,
+            smooth: !showSpeed,
             showSymbol: false,
             itemStyle: { color },
             lineStyle: {
@@ -163,19 +184,33 @@ export default function Chart2D({
               shadowBlur: 12,
               shadowColor,
             },
-            areaStyle: {
-              color: {
-                type: "linear" as const,
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: resolveShadowColor(0, 0.2) },
-                  { offset: 1, color: resolveShadowColor(0, 0) },
-                ],
-              },
-            },
+            ...(showSpeed
+              ? {
+                  markLine: {
+                    silent: true,
+                    symbol: "none",
+                    lineStyle: {
+                      color: "rgba(139, 148, 158, 0.45)",
+                      type: "dashed" as const,
+                    },
+                    data: [{ yAxis: 0 }],
+                  },
+                }
+              : {
+                  areaStyle: {
+                    color: {
+                      type: "linear" as const,
+                      x: 0,
+                      y: 0,
+                      x2: 0,
+                      y2: 1,
+                      colorStops: [
+                        { offset: 0, color: resolveShadowColor(0, 0.2) },
+                        { offset: 1, color: resolveShadowColor(0, 0) },
+                      ],
+                    },
+                  },
+                }),
           },
         ],
         animation: true,
@@ -346,11 +381,29 @@ export default function Chart2D({
       animation: true,
       animationDuration: 400,
     };
-  }, [aggregationMetric, clampedActive, groupingConfig?.groupMode, isBarChart, isSingleDive, series]);
+  }, [aggregationMetric, clampedActive, groupingConfig?.groupMode, isBarChart, isSingleDive, series, singleDiveMetric]);
 
   if (isSingleDive) {
     return (
       <div className="chart-container chart-container--single">
+        <div className="chart-single-toolbar">
+          <div className="segment-buttons chart-metric-toggle">
+            <button
+              type="button"
+              className={singleDiveMetric === "depth" ? "active" : ""}
+              onClick={() => setSingleDiveMetric("depth")}
+            >
+              Depth
+            </button>
+            <button
+              type="button"
+              className={singleDiveMetric === "speed" ? "active" : ""}
+              onClick={() => setSingleDiveMetric("speed")}
+            >
+              Speed
+            </button>
+          </div>
+        </div>
         <div className="chart-plot">
           <ReactECharts
             option={option}
