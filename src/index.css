@@ -478,6 +478,11 @@ body,
   align-items: center;
   gap: 6px;
   min-width: 0;
+  flex: 1;
+}
+
+.sidebar-header-chips {
+  margin-left: 4px;
 }
 
 .sidebar-expand-btn {
@@ -648,6 +653,26 @@ body,
 
 .sidebar-dive-table-row.hidden-dive-row {
   opacity: 0.55;
+}
+
+.sidebar-dive-table-row.archived {
+  opacity: 0.65;
+  font-style: italic;
+}
+
+.sidebar-dive-table-row.archived.active {
+  opacity: 0.85;
+}
+
+.archived-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #6e7681;
 }
 
 .sidebar-dive-table-row.filter-excluded {

@@ -8,7 +8,7 @@ import {
 } from "./grouping";
 import {
   activeDives,
-  archiveDives,
+  archiveDivesByDatetime,
   diveDataFromStore,
   loadStore,
   mergeUddfIntoStore,
@@ -47,6 +47,7 @@ export default function App() {
     null,
   );
   const [diveListExpanded, setDiveListExpanded] = useState(false);
+  const [showArchivedDives, setShowArchivedDives] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -61,6 +62,13 @@ export default function App() {
     () => (store ? diveDataFromStore(store) : null),
     [store],
   );
+
+  const listData = useMemo<DiveData | null>(() => {
+    if (!store) return null;
+    return diveDataFromStore(store, { includeArchived: showArchivedDives });
+  }, [showArchivedDives, store]);
+
+  const sidebarData = diveListExpanded ? listData : data;
 
   const toggleVisibility = useCallback((index: number) => {
     setHiddenDives((prev) => {
@@ -123,17 +131,43 @@ export default function App() {
     [],
   );
 
-  const handleArchiveDive = useCallback((index: number) => {
-    setStore((prev) => {
-      if (!prev) return prev;
-      const updated = archiveDives(prev, [index]);
-      saveStore(updated);
-      setTags(tagsFromStored(updated.tags, activeDives(updated)));
-      return updated;
-    });
-    setActiveSidebarDive(null);
-    setHiddenDives(new Set());
-  }, []);
+  const handleArchiveDive = useCallback(
+    (index: number) => {
+      const source = diveListExpanded ? listData : data;
+      const datetime = source?.datetimes[index];
+      if (!datetime) return;
+
+      setStore((prev) => {
+        if (!prev) return prev;
+        const updated = archiveDivesByDatetime(prev, [datetime]);
+        saveStore(updated);
+        setTags(tagsFromStored(updated.tags, activeDives(updated)));
+        return updated;
+      });
+      setActiveSidebarDive(null);
+      setHiddenDives(new Set());
+    },
+    [data, diveListExpanded, listData],
+  );
+
+  const handleShowArchivedDivesChange = useCallback(
+    (checked: boolean) => {
+      const datetime =
+        activeSidebarDive != null && sidebarData
+          ? sidebarData.datetimes[activeSidebarDive]
+          : null;
+      setShowArchivedDives(checked);
+      if (!store) return;
+
+      const nextData = diveDataFromStore(store, { includeArchived: checked });
+      if (datetime) {
+        const nextIndex = nextData.datetimes.indexOf(datetime);
+        setActiveSidebarDive(nextIndex >= 0 ? nextIndex : null);
+      }
+      setHiddenDives(new Set());
+    },
+    [activeSidebarDive, sidebarData, store],
+  );
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -205,23 +239,29 @@ export default function App() {
   );
 
   const singleDiveChart = useMemo(() => {
-    if (!diveListExpanded || activeSidebarDive == null || !data) return null;
-    const points = data.seriesData[activeSidebarDive];
+    if (!diveListExpanded || activeSidebarDive == null || !listData) return null;
+    const points = listData.seriesData[activeSidebarDive];
     if (!points?.length) return null;
+
+    const temperatureData = points.flatMap(([time, , temp]) =>
+      temp !== undefined ? [[time, temp] as [number, number]] : [],
+    );
 
     return {
       chartMode: "line" as const,
       series: [
         {
-          label: data.seriesNames[activeSidebarDive],
+          label: listData.seriesNames[activeSidebarDive],
           data: points.map(([t, d]) => [t, d] as [number, number]),
           primaryDiveIndex: 0,
           diveIndices: [0],
-          color: getDisciplineColor(data.disciplines[activeSidebarDive]),
+          color: getDisciplineColor(listData.disciplines[activeSidebarDive]),
+          temperatureData:
+            temperatureData.length > 0 ? temperatureData : undefined,
         },
       ],
     };
-  }, [activeSidebarDive, data, diveListExpanded]);
+  }, [activeSidebarDive, diveListExpanded, listData]);
 
   const handleToggleDiveListExpanded = useCallback(() => {
     setDiveListExpanded((prev) => {
@@ -229,11 +269,14 @@ export default function App() {
       if (next && activeSidebarDive == null && visibleIndices.length > 0) {
         setActiveSidebarDive(visibleIndices[visibleIndices.length - 1]);
       }
+      if (!next) {
+        setShowArchivedDives(false);
+      }
       return next;
     });
   }, [activeSidebarDive, visibleIndices]);
 
-  if (!store || !data || !groupingConfig) {
+  if (!store || !data || !listData || !sidebarData || !groupingConfig) {
     return <div className="app-loading">Loading dives…</div>;
   }
 
@@ -258,13 +301,15 @@ export default function App() {
           />
         </div>
       </header>
-      <GroupingControls
-        config={groupingConfig}
-        filters={diveFilters}
-        availableDisciplines={filterOptions?.disciplines ?? []}
-        onChange={setGroupingConfig}
-        onFiltersChange={setDiveFilters}
-      />
+      {!diveListExpanded && (
+        <GroupingControls
+          config={groupingConfig}
+          filters={diveFilters}
+          availableDisciplines={filterOptions?.disciplines ?? []}
+          onChange={setGroupingConfig}
+          onFiltersChange={setDiveFilters}
+        />
+      )}
       {filterOptions && (
         <FilterControls
           filters={diveFilters}
@@ -279,12 +324,13 @@ export default function App() {
       >
         <Sidebar
           groupingConfig={groupingConfig}
-          seriesNames={data.seriesNames}
-          diveNumbers={data.diveNumbers}
-          seriesData={data.seriesData}
-          disciplines={data.disciplines}
-          weights={data.weights}
-          exposureSuits={data.exposureSuits}
+          seriesNames={sidebarData.seriesNames}
+          diveNumbers={sidebarData.diveNumbers}
+          seriesData={sidebarData.seriesData}
+          disciplines={sidebarData.disciplines}
+          weights={sidebarData.weights}
+          exposureSuits={sidebarData.exposureSuits}
+          archived={sidebarData.archived}
           hiddenDives={hiddenDives}
           activeDiveIndex={activeSidebarDive}
           onDiveActivate={setActiveSidebarDive}
@@ -298,6 +344,8 @@ export default function App() {
           diveFilters={diveFilters}
           diveListExpanded={diveListExpanded}
           onToggleDiveListExpanded={handleToggleDiveListExpanded}
+          showArchivedDives={showArchivedDives}
+          onShowArchivedDivesChange={handleShowArchivedDivesChange}
         />
         <main className="app-main">
           {diveListExpanded ? (

@@ -192,13 +192,23 @@ function migrateSafetyProperty(store: DiveStore): DiveStore {
 // ── Core store ↔ DiveData conversion ──
 
 export function activeDives(store: DiveStore): StoredDive[] {
+  return sortedDives(store, false);
+}
+
+function sortedDives(
+  store: DiveStore,
+  includeArchived: boolean,
+): StoredDive[] {
   return [...store.dives]
-    .filter((d) => !d.archived)
+    .filter((d) => includeArchived || !d.archived)
     .sort((a, b) => a.datetime.localeCompare(b.datetime));
 }
 
-export function diveDataFromStore(store: DiveStore): DiveData {
-  const sorted = activeDives(store);
+export function diveDataFromStore(
+  store: DiveStore,
+  options: { includeArchived?: boolean } = {},
+): DiveData {
+  const sorted = sortedDives(store, options.includeArchived ?? false);
   return {
     seriesNames: sorted.map((d) =>
       seriesNameFromDive(d.datetime, d.diveNumber),
@@ -209,6 +219,7 @@ export function diveDataFromStore(store: DiveStore): DiveData {
     disciplines: sorted.map((d) => d.discipline),
     weights: sorted.map((d) => d.weightKg),
     exposureSuits: sorted.map((d) => d.exposureSuit),
+    archived: sorted.map((d) => d.archived === true),
   };
 }
 
@@ -302,7 +313,14 @@ export function archiveDives(
   store: DiveStore,
   diveIndices: number[],
 ): DiveStore {
-  const datetimesToUpdate = datetimesFromIndices(store, diveIndices);
+  return archiveDivesByDatetime(store, datetimesFromIndices(store, diveIndices));
+}
+
+export function archiveDivesByDatetime(
+  store: DiveStore,
+  datetimes: Iterable<string>,
+): DiveStore {
+  const datetimesToUpdate = new Set(datetimes);
   if (datetimesToUpdate.size === 0) return store;
   return {
     ...store,

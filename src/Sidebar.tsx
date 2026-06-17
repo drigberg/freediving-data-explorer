@@ -34,6 +34,7 @@ interface SidebarProps {
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
+  archived?: boolean[];
   hiddenDives: Set<number>;
   activeDiveIndex: number | null;
   onDiveActivate: (index: number) => void;
@@ -48,6 +49,8 @@ interface SidebarProps {
   groupingConfig: GroupingConfig;
   diveListExpanded: boolean;
   onToggleDiveListExpanded: () => void;
+  showArchivedDives: boolean;
+  onShowArchivedDivesChange: (checked: boolean) => void;
 }
 
 type AssignMode =
@@ -218,6 +221,7 @@ export default function Sidebar({
   disciplines,
   weights,
   exposureSuits,
+  archived,
   hiddenDives,
   activeDiveIndex,
   onDiveActivate,
@@ -232,6 +236,8 @@ export default function Sidebar({
   groupingConfig,
   diveListExpanded,
   onToggleDiveListExpanded,
+  showArchivedDives,
+  onShowArchivedDivesChange,
 }: SidebarProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showTagDialog, setShowTagDialog] = useState(false);
@@ -267,7 +273,12 @@ export default function Sidebar({
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeDiveIndex, diveListExpanded, groupingConfig.groupMode, seriesNames]);
+  }, [
+    activeDiveIndex,
+    diveListExpanded,
+    groupingConfig.groupMode,
+    seriesNames,
+  ]);
 
   const toggleDateCollapsed = useCallback((dateKey: string) => {
     setCollapsedDates((prev) => {
@@ -605,6 +616,7 @@ export default function Sidebar({
     const isHidden = hiddenDives.has(i);
     const isSelected = selection.has(i);
     const isActive = activeDiveIndex === i;
+    const isArchived = archived?.[i] === true;
     const discipline = disciplines[i];
     const disciplineClass = discipline ? disciplineTagClass(discipline) : "";
     const mutedClass = excluded ? " filter-excluded" : "";
@@ -614,13 +626,12 @@ export default function Sidebar({
     const exposureSuit = exposureSuits[i];
     const diveTags = tagsByDive.get(i) ?? [];
     const dateLabel = shortDateLabel(seriesNames[i]);
-
     if (inSelectMode) {
       return (
         <tr
           key={i}
           data-dive-index={i}
-          className={`sidebar-dive-table-row tagging${mutedClass} ${isSelected ? "selected" : ""}`}
+          className={`sidebar-dive-table-row tagging${mutedClass}${isArchived ? " archived" : ""} ${isSelected ? "selected" : ""}`}
           onClick={(e) => handleSelectionClick(i, e.shiftKey)}
         >
           <td className="sidebar-dive-table-checkbox">
@@ -628,17 +639,19 @@ export default function Sidebar({
           </td>
           <td>{formatDiveNumber(diveNumbers[i])}</td>
           <td>{dateLabel}</td>
-          <td>{Math.abs(maxDepth).toFixed(1)}m</td>
-          <td>{formatDuration(duration)}</td>
-          <td>{maxTemp !== undefined ? `${maxTemp.toFixed(1)}°C` : "—"}</td>
-          <td>{minTemp !== undefined ? `${minTemp.toFixed(1)}°C` : "—"}</td>
           <td>
             {discipline ? (
-              <span className={disciplineClass}>{disciplineAbbrev(discipline)}</span>
+              <span className={disciplineClass}>
+                {disciplineAbbrev(discipline)}
+              </span>
             ) : (
               "—"
             )}
           </td>
+          <td>{Math.abs(maxDepth).toFixed(1)}m</td>
+          <td>{formatDuration(duration)}</td>
+          <td>{maxTemp !== undefined ? `${maxTemp.toFixed(1)}°C` : "—"}</td>
+          <td>{minTemp !== undefined ? `${minTemp.toFixed(1)}°C` : "—"}</td>
           <td>{weight !== undefined ? `${weight}kg` : "—"}</td>
           <td>{exposureSuit ? formatExposureSuit(exposureSuit) : "—"}</td>
           <td>{diveTags.length > 0 ? diveTags.join(", ") : "—"}</td>
@@ -650,35 +663,43 @@ export default function Sidebar({
       <tr
         key={i}
         data-dive-index={i}
-        className={`sidebar-dive-table-row${mutedClass}${isActive ? " active" : ""}${isHidden ? " hidden-dive-row" : ""}`}
+        className={`sidebar-dive-table-row${mutedClass}${isActive ? " active" : ""}${isHidden ? " hidden-dive-row" : ""}${isArchived ? " archived" : ""}`}
         onClick={() => onDiveActivate(i)}
       >
         <td className="sidebar-dive-table-visibility">
-          <button
-            type="button"
-            className={`visibility-toggle ${isHidden ? "hidden-dive" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleVisibility(i);
-            }}
-            title={isHidden ? "Show dive" : "Hide dive"}
-          >
-            <EyeIcon open={!isHidden} />
-          </button>
+          {isArchived ? (
+            <span className="archived-marker" title="Archived">
+              A
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={`visibility-toggle ${isHidden ? "hidden-dive" : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleVisibility(i);
+              }}
+              title={isHidden ? "Show dive" : "Hide dive"}
+            >
+              <EyeIcon open={!isHidden} />
+            </button>
+          )}
         </td>
         <td>{formatDiveNumber(diveNumbers[i])}</td>
         <td>{dateLabel}</td>
-        <td>{Math.abs(maxDepth).toFixed(1)}m</td>
-        <td>{formatDuration(duration)}</td>
-        <td>{maxTemp !== undefined ? `${maxTemp.toFixed(1)}°C` : "—"}</td>
-        <td>{minTemp !== undefined ? `${minTemp.toFixed(1)}°C` : "—"}</td>
         <td>
           {discipline ? (
-            <span className={disciplineClass}>{disciplineAbbrev(discipline)}</span>
+            <span className={disciplineClass}>
+              {disciplineAbbrev(discipline)}
+            </span>
           ) : (
             "—"
           )}
         </td>
+        <td>{Math.abs(maxDepth).toFixed(1)}m</td>
+        <td>{formatDuration(duration)}</td>
+        <td>{maxTemp !== undefined ? `${maxTemp.toFixed(1)}°C` : "—"}</td>
+        <td>{minTemp !== undefined ? `${minTemp.toFixed(1)}°C` : "—"}</td>
         <td>{weight !== undefined ? `${weight}kg` : "—"}</td>
         <td>{exposureSuit ? formatExposureSuit(exposureSuit) : "—"}</td>
         <td>{diveTags.length > 0 ? diveTags.join(", ") : "—"}</td>
@@ -694,11 +715,11 @@ export default function Sidebar({
             <th aria-label={inSelectMode ? "Select" : "Visibility"} />
             <th>Dive</th>
             <th>Date</th>
+            <th>Discipline</th>
             <th>Depth</th>
             <th>Duration</th>
             <th>Max °C</th>
             <th>Min °C</th>
-            <th>Discipline</th>
             <th>Weight</th>
             <th>Suit</th>
             <th>Tags</th>
@@ -774,8 +795,24 @@ export default function Sidebar({
                 : "Expand dive details list"
             }
           >
-            {diveListExpanded ? <PanelRightCloseIcon /> : <PanelRightOpenIcon />}
+            {diveListExpanded ? (
+              <PanelRightCloseIcon />
+            ) : (
+              <PanelRightOpenIcon />
+            )}
           </button>
+          {diveListExpanded && (
+            <div className="filter-chips sidebar-header-chips">
+              <button
+                type="button"
+                className={showArchivedDives ? "active" : ""}
+                onClick={() => onShowArchivedDivesChange(!showArchivedDives)}
+                disabled={inSelectMode}
+              >
+                Show Archived
+              </button>
+            </div>
+          )}
         </div>
         <button
           className="sidebar-header-btn"
@@ -811,7 +848,9 @@ export default function Sidebar({
             {renderYearGroups(includedGroups, false)}
             {!inSelectMode && excludedGroups.length > 0 && (
               <>
-                <li className="sidebar-excluded-divider">Excluded By Filters</li>
+                <li className="sidebar-excluded-divider">
+                  Excluded By Filters
+                </li>
                 {renderYearGroups(excludedGroups, true)}
               </>
             )}

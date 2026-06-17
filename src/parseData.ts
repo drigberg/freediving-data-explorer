@@ -19,6 +19,7 @@ export interface DiveData {
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
+  archived?: boolean[];
 }
 
 /** Derive a display-friendly series name from a dive's datetime + diveNumber. */
