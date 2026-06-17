@@ -1,6 +1,5 @@
 - Dive detail mode
-  - Toggle to switch between depth and ascent speed
-  - Show thermocline somehow
+  - Show thermocline somehow?
 - Allow editing and removing tags for individual dives
 - Allow adding tags for all dives by date
 - Allow adding tags for all dives matching current filters

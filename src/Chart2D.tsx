@@ -6,7 +6,12 @@ import {
   GroupingConfig,
   type ProcessedData,
 } from "./grouping";
-import { colorWithAlpha, getSeriesColor, getSeriesColorRgba, getSeriesOpacity } from "./colors";
+import {
+  colorWithAlpha,
+  getSeriesColor,
+  getSeriesColorRgba,
+  getSeriesOpacity,
+} from "./colors";
 import { computeVelocitySeries } from "./diveStats";
 
 interface Chart2DProps {
@@ -26,7 +31,7 @@ type SeriesEventParams = {
 
 const ACTIVE_LINE_COLOR = "#ffffff";
 
-type SingleDiveMetric = "depth" | "speed";
+type SingleDiveMetric = "depth" | "velocity";
 
 export default function Chart2D({
   processed,
@@ -128,8 +133,8 @@ export default function Chart2D({
       const color = resolveColor(0);
       const shadowColor = resolveShadowColor(0);
       const depthData = series[0]?.data ?? [];
-      const showSpeed = singleDiveMetric === "speed";
-      const primaryData = showSpeed
+      const showVelocity = singleDiveMetric === "velocity";
+      const primaryData = showVelocity
         ? computeVelocitySeries(depthData)
         : depthData;
 
@@ -143,7 +148,7 @@ export default function Chart2D({
           textStyle: { color: "#e6edf3", fontSize: 12 },
           valueFormatter: (value) => {
             if (typeof value !== "number") return String(value ?? "");
-            return showSpeed
+            return showVelocity
               ? `${value.toFixed(2)} m/s`
               : `${Math.abs(value).toFixed(1)} m`;
           },
@@ -165,7 +170,7 @@ export default function Chart2D({
           axisLine: { lineStyle: { color: "#30363d" } },
           axisLabel: {
             color: "#8b949e",
-            formatter: showSpeed
+            formatter: showVelocity
               ? (value: number) => `${value.toFixed(1)}`
               : undefined,
           },
@@ -175,7 +180,7 @@ export default function Chart2D({
           {
             type: "line" as const,
             data: primaryData,
-            smooth: !showSpeed,
+            smooth: true,
             showSymbol: false,
             itemStyle: { color },
             lineStyle: {
@@ -184,7 +189,7 @@ export default function Chart2D({
               shadowBlur: 12,
               shadowColor,
             },
-            ...(showSpeed
+            ...(showVelocity
               ? {
                   markLine: {
                     silent: true,
@@ -381,7 +386,15 @@ export default function Chart2D({
       animation: true,
       animationDuration: 400,
     };
-  }, [aggregationMetric, clampedActive, groupingConfig?.groupMode, isBarChart, isSingleDive, series, singleDiveMetric]);
+  }, [
+    aggregationMetric,
+    clampedActive,
+    groupingConfig?.groupMode,
+    isBarChart,
+    isSingleDive,
+    series,
+    singleDiveMetric,
+  ]);
 
   if (isSingleDive) {
     return (
@@ -397,10 +410,10 @@ export default function Chart2D({
             </button>
             <button
               type="button"
-              className={singleDiveMetric === "speed" ? "active" : ""}
-              onClick={() => setSingleDiveMetric("speed")}
+              className={singleDiveMetric === "velocity" ? "active" : ""}
+              onClick={() => setSingleDiveMetric("velocity")}
             >
-              Speed
+              Velocity
             </button>
           </div>
         </div>

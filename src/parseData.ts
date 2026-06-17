@@ -93,9 +93,25 @@ export function trimTrailingSurfacePoints(
   return profile.slice(0, firstTrailingZeroIndex + 1);
 }
 
+/** Shift all points so the first sample starts at time 0. */
+export function shiftProfileToZeroStart(
+  profile: ProfilePoint[],
+): ProfilePoint[] {
+  if (profile.length === 0 || profile[0][0] === 0) return profile;
+
+  const offset = profile[0][0];
+  return profile.map(([time, depth, temp]) =>
+    temp !== undefined
+      ? [time - offset, depth, temp]
+      : [time - offset, depth],
+  );
+}
+
 export function normalizeProfilePoints(profile: ProfilePoint[]): ProfilePoint[] {
   return ensureTrailingZero(
-    trimTrailingSurfacePoints(trimLeadingSurfacePoints(profile)),
+    shiftProfileToZeroStart(
+      trimTrailingSurfacePoints(trimLeadingSurfacePoints(profile)),
+    ),
   );
 }
 
