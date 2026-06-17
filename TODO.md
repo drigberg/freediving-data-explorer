@@ -1,8 +1,10 @@
-- Allow editing and removing tags for dives
+- Dive detail mode
+  - Toggle to switch between depth and ascent speed
+  - Show thermocline somehow
+- Allow editing and removing tags for individual dives
 - Allow adding tags for all dives by date
+- Allow adding tags for all dives matching current filters
 - "Add discipline" button for individual dives
-- List/table mode
-  - Toggle for archived dives
 - Timeline mode:
   - Time interval: day/month/quarter/year
   - Group by:
@@ -11,7 +13,3 @@
   - Aggregation:
     - Longest
     - Deepest
-- Dive detail mode
-  - Graph one dive, with depth and temperature
-  - Include temperature
-  - Toggle to switch between depth and ascent speed

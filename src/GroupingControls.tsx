@@ -81,7 +81,7 @@ export default function GroupingControls({
             );
           }}
         >
-          <option value="">Custom</option>
+          {activePreset ? null : <option value="">Custom</option>}
           {GROUPING_PRESETS.map((preset) => (
             <option key={preset.id} value={preset.id}>
               {preset.label}
