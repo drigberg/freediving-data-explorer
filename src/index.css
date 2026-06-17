@@ -444,7 +444,7 @@ body,
 
 .sidebar {
   flex-shrink: 0;
-  width: 220px;
+  width: 260px;
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);

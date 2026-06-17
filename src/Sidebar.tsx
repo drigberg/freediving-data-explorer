@@ -425,7 +425,7 @@ export default function Sidebar({
       points.length > 0 ? Math.min(...points.map(([, d]) => d)) : 0;
     const duration =
       points.length > 0 ? points[points.length - 1][0] - points[0][0] : 0;
-    const summary = formatDiveNumber(diveNumbers[i]);
+    const summary = `${formatDiveNumber(diveNumbers[i])} (${maxDepth.toFixed(1)}m)`;
 
     if (inSelectMode) {
       return (
