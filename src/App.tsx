@@ -31,6 +31,7 @@ import FilterControls from "./FilterControls";
 import GroupingControls from "./GroupingControls";
 import Sidebar from "./Sidebar";
 import Chart2D from "./Chart2D";
+import { getDisciplineColor } from "./disciplines";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -45,6 +46,7 @@ export default function App() {
   const [activeSidebarDive, setActiveSidebarDive] = useState<number | null>(
     null,
   );
+  const [diveListExpanded, setDiveListExpanded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -202,6 +204,35 @@ export default function App() {
     [filteredData, groupingConfig],
   );
 
+  const singleDiveChart = useMemo(() => {
+    if (!diveListExpanded || activeSidebarDive == null || !data) return null;
+    const points = data.seriesData[activeSidebarDive];
+    if (!points?.length) return null;
+
+    return {
+      chartMode: "line" as const,
+      series: [
+        {
+          label: data.seriesNames[activeSidebarDive],
+          data: points.map(([t, d]) => [t, d] as [number, number]),
+          primaryDiveIndex: 0,
+          diveIndices: [0],
+          color: getDisciplineColor(data.disciplines[activeSidebarDive]),
+        },
+      ],
+    };
+  }, [activeSidebarDive, data, diveListExpanded]);
+
+  const handleToggleDiveListExpanded = useCallback(() => {
+    setDiveListExpanded((prev) => {
+      const next = !prev;
+      if (next && activeSidebarDive == null && visibleIndices.length > 0) {
+        setActiveSidebarDive(visibleIndices[visibleIndices.length - 1]);
+      }
+      return next;
+    });
+  }, [activeSidebarDive, visibleIndices]);
+
   if (!store || !data || !groupingConfig) {
     return <div className="app-loading">Loading dives…</div>;
   }
@@ -243,7 +274,9 @@ export default function App() {
           onChange={setDiveFilters}
         />
       )}
-      <div className="app-body">
+      <div
+        className={`app-body${diveListExpanded ? " app-body--dive-list-expanded" : ""}`}
+      >
         <Sidebar
           groupingConfig={groupingConfig}
           seriesNames={data.seriesNames}
@@ -263,9 +296,22 @@ export default function App() {
           onExposureSuitAssign={handleExposureSuitAssign}
           onArchiveDive={handleArchiveDive}
           diveFilters={diveFilters}
+          diveListExpanded={diveListExpanded}
+          onToggleDiveListExpanded={handleToggleDiveListExpanded}
         />
         <main className="app-main">
-          {processed.series.length > 0 ? (
+          {diveListExpanded ? (
+            singleDiveChart ? (
+              <Chart2D
+                processed={singleDiveChart}
+                visibleIndices={visibleIndices}
+                activeDiveIndex={activeSidebarDive}
+                variant="single"
+              />
+            ) : (
+              <div className="chart-empty">Select a dive to view its profile.</div>
+            )
+          ) : processed.series.length > 0 ? (
             <Chart2D
               groupingConfig={groupingConfig}
               processed={processed}

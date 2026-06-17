@@ -13,7 +13,8 @@ interface Chart2DProps {
   visibleIndices: number[];
   activeDiveIndex?: number | null;
   onActiveDiveChange?: (globalDiveIndex: number) => void;
-  groupingConfig: GroupingConfig;
+  groupingConfig?: GroupingConfig;
+  variant?: "default" | "single";
 }
 
 type SeriesEventParams = {
@@ -30,8 +31,10 @@ export default function Chart2D({
   activeDiveIndex,
   onActiveDiveChange,
   groupingConfig,
+  variant = "default",
 }: Chart2DProps) {
   const { series, chartMode, aggregationMetric } = processed;
+  const isSingleDive = variant === "single";
   const isBarChart = chartMode === "bar";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
@@ -115,6 +118,70 @@ export default function Chart2D({
         ? colorWithAlpha(color, alpha)
         : getSeriesColorRgba(i, total, alpha);
     };
+
+    if (isSingleDive) {
+      const color = resolveColor(0);
+      const shadowColor = resolveShadowColor(0);
+
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          borderColor: "rgba(255, 255, 255, 0.12)",
+          borderWidth: 1,
+          textStyle: { color: "#e6edf3", fontSize: 12 },
+        },
+        grid: {
+          left: 52,
+          right: 16,
+          top: 16,
+          bottom: 36,
+        },
+        xAxis: {
+          type: "value",
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: { color: "#8b949e" },
+          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+        },
+        yAxis: {
+          type: "value",
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: { color: "#8b949e" },
+          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+        },
+        series: [
+          {
+            type: "line" as const,
+            data: series[0]?.data ?? [],
+            smooth: true,
+            showSymbol: false,
+            itemStyle: { color },
+            lineStyle: {
+              width: 2.5,
+              color,
+              shadowBlur: 12,
+              shadowColor,
+            },
+            areaStyle: {
+              color: {
+                type: "linear" as const,
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: resolveShadowColor(0, 0.2) },
+                  { offset: 1, color: resolveShadowColor(0, 0) },
+                ],
+              },
+            },
+          },
+        ],
+        animation: true,
+        animationDuration: 400,
+      };
+    }
 
     if (isBarChart) {
       const yAxisName =
@@ -202,7 +269,7 @@ export default function Chart2D({
         textStyle: { color: "#e6edf3", fontSize: 12 },
       },
       legend:
-        groupingConfig.groupMode === "none"
+        groupingConfig?.groupMode === "none"
           ? undefined
           : {
               data: series.map((s) => s.label),
@@ -279,7 +346,23 @@ export default function Chart2D({
       animation: true,
       animationDuration: 400,
     };
-  }, [aggregationMetric, clampedActive, isBarChart, series]);
+  }, [aggregationMetric, clampedActive, groupingConfig?.groupMode, isBarChart, isSingleDive, series]);
+
+  if (isSingleDive) {
+    return (
+      <div className="chart-container chart-container--single">
+        <div className="chart-plot">
+          <ReactECharts
+            option={option}
+            notMerge={true}
+            style={{ height: "100%", width: "100%" }}
+            opts={{ renderer: "canvas" }}
+            theme="dark"
+          />
+        </div>
+      </div>
+    );
+  }
 
   const activeSeries = series[clampedActive];
   const activePoints = activeSeries.data;

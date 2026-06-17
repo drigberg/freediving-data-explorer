@@ -1,5 +1,5 @@
-- Color-code dives by discipline, with narrow hue ranges
 - Allow editing and removing tags for dives
+- Allow adding tags for all dives by date
 - "Add discipline" button for individual dives
 - List/table mode
   - Toggle for archived dives
