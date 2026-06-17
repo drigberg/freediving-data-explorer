@@ -239,7 +239,8 @@ export default function App() {
   );
 
   const singleDiveChart = useMemo(() => {
-    if (!diveListExpanded || activeSidebarDive == null || !listData) return null;
+    if (!diveListExpanded || activeSidebarDive == null || !listData)
+      return null;
     const points = listData.seriesData[activeSidebarDive];
     if (!points?.length) return null;
 
@@ -357,7 +358,9 @@ export default function App() {
                 variant="single"
               />
             ) : (
-              <div className="chart-empty">Select a dive to view its profile.</div>
+              <div className="chart-empty">
+                Select a dive to view its profile.
+              </div>
             )
           ) : processed.series.length > 0 ? (
             <Chart2D

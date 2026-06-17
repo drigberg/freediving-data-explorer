@@ -154,26 +154,29 @@ export default function Chart2D({
           },
         },
         grid: {
-          left: 52,
+          left: showVelocity ? 68 : 60,
           right: 16,
           top: 44,
-          bottom: 36,
+          bottom: 40,
         },
         xAxis: {
           type: "value",
+          name: "Time (sec)",
+          nameLocation: "middle",
+          nameGap: 28,
+          nameTextStyle: { color: "#8b949e", fontSize: 13 },
           axisLine: { lineStyle: { color: "#30363d" } },
           axisLabel: { color: "#8b949e" },
           splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
         },
         yAxis: {
           type: "value",
+          name: showVelocity ? "Velocity (m/s)" : "Depth (m)",
+          nameLocation: "middle",
+          nameGap: showVelocity ? 50 : 42,
+          nameTextStyle: { color: "#8b949e", fontSize: 13 },
           axisLine: { lineStyle: { color: "#30363d" } },
-          axisLabel: {
-            color: "#8b949e",
-            formatter: showVelocity
-              ? (value: number) => `${value.toFixed(1)}`
-              : undefined,
-          },
+          axisLabel: { color: "#8b949e" },
           splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
         },
         series: [
@@ -218,8 +221,7 @@ export default function Chart2D({
                 }),
           },
         ],
-        animation: true,
-        animationDuration: 400,
+        animation: false,
       };
     }
 
@@ -294,8 +296,7 @@ export default function Chart2D({
             barMaxWidth: 48,
           },
         ],
-        animation: true,
-        animationDuration: 400,
+        animation: false,
       };
     }
 
@@ -383,8 +384,7 @@ export default function Chart2D({
           z: isActive ? 10 : 1,
         };
       }),
-      animation: true,
-      animationDuration: 400,
+      animation: false,
     };
   }, [
     aggregationMetric,

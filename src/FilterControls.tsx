@@ -149,7 +149,7 @@ export default function FilterControls({
         )}
 
         <div className="filter-row">
-          <span className="filter-sublabel">Duration (s)</span>
+          <span className="filter-sublabel">Duration (sec)</span>
           <input
             type="number"
             className="filter-number-input"

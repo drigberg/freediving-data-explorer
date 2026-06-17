@@ -1,5 +1,6 @@
 - Dive detail mode
   - Show thermocline somehow?
+- Fix flicker when switching between modes
 - Allow editing and removing tags for individual dives
 - Allow adding tags for all dives by date
 - Allow adding tags for all dives matching current filters
