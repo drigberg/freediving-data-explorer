@@ -33,7 +33,103 @@ type SeriesEventParams = {
 
 const ACTIVE_LINE_COLOR = "#ffffff";
 
-type SingleDiveMetric = "depth" | "velocity";
+function buildSingleDiveChartOption(
+  depthData: [number, number][],
+  metric: "depth" | "velocity",
+  color: string,
+  shadowColor: string,
+): EChartsOption {
+  const isVelocity = metric === "velocity";
+  const primaryData = isVelocity
+    ? computeVelocitySeries(depthData)
+    : depthData;
+
+  return {
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: "rgba(13, 17, 23, 0.9)",
+      borderColor: "rgba(255, 255, 255, 0.12)",
+      borderWidth: 1,
+      textStyle: { color: "#e6edf3", fontSize: 12 },
+      valueFormatter: (value) => {
+        if (typeof value !== "number") return String(value ?? "");
+        return isVelocity
+          ? `${value.toFixed(2)} m/s`
+          : `${Math.abs(value).toFixed(1)} m`;
+      },
+    },
+    grid: {
+      left: isVelocity ? 68 : 60,
+      right: 16,
+      top: 16,
+      bottom: 40,
+    },
+    xAxis: {
+      type: "value",
+      name: "Time (sec)",
+      nameLocation: "middle",
+      nameGap: 28,
+      nameTextStyle: { color: "#8b949e", fontSize: 13 },
+      axisLine: { lineStyle: { color: "#30363d" } },
+      axisLabel: { color: "#8b949e" },
+      splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+    },
+    yAxis: {
+      type: "value",
+      name: isVelocity ? "Velocity (m/s)" : "Depth (m)",
+      nameLocation: "middle",
+      nameGap: isVelocity ? 50 : 42,
+      nameTextStyle: { color: "#8b949e", fontSize: 13 },
+      axisLine: { lineStyle: { color: "#30363d" } },
+      axisLabel: { color: "#8b949e" },
+      splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+    },
+    series: [
+      {
+        type: "line" as const,
+        data: primaryData,
+        smooth: true,
+        showSymbol: false,
+        itemStyle: { color },
+        lineStyle: {
+          width: 2.5,
+          color,
+          shadowBlur: 12,
+          shadowColor,
+        },
+        ...(isVelocity
+          ? {
+              markLine: {
+                silent: true,
+                symbol: "none",
+                lineStyle: {
+                  color: "rgba(139, 148, 158, 0.45)",
+                  type: "dashed" as const,
+                },
+                data: [{ yAxis: 0 }],
+              },
+            }
+          : {
+              areaStyle: {
+                color: {
+                  type: "linear" as const,
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: colorWithAlpha(color, 0.2) },
+                    { offset: 1, color: colorWithAlpha(color, 0) },
+                  ],
+                },
+              },
+            }),
+      },
+    ],
+    animation: false,
+  };
+}
 
 export default function Chart2D({
   processed,
@@ -52,8 +148,6 @@ export default function Chart2D({
   const viewMode = groupingConfig?.viewMode ?? "diveProfile";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
-  const [singleDiveMetric, setSingleDiveMetric] =
-    useState<SingleDiveMetric>("depth");
 
   useEffect(() => {
     setActiveIndex(series.length - 1);
@@ -138,6 +232,31 @@ export default function Chart2D({
     [groupingConfig, onGroupingConfigChange],
   );
 
+  const singleDiveCharts = useMemo(() => {
+    if (!isSingleDive) return null;
+
+    const color = series[0]?.color ?? getSeriesColor(0, 1);
+    const shadowColor = series[0]?.color
+      ? colorWithAlpha(series[0].color, 0.25)
+      : getSeriesColorRgba(0, 1, 0.25);
+    const depthData = series[0]?.data ?? [];
+
+    return {
+      depth: buildSingleDiveChartOption(
+        depthData,
+        "depth",
+        color,
+        shadowColor,
+      ),
+      velocity: buildSingleDiveChartOption(
+        depthData,
+        "velocity",
+        color,
+        shadowColor,
+      ),
+    };
+  }, [isSingleDive, series]);
+
   const option = useMemo<EChartsOption>(() => {
     const total = series.length;
 
@@ -152,99 +271,7 @@ export default function Chart2D({
     };
 
     if (isSingleDive) {
-      const color = resolveColor(0);
-      const shadowColor = resolveShadowColor(0);
-      const depthData = series[0]?.data ?? [];
-      const showVelocity = singleDiveMetric === "velocity";
-      const primaryData = showVelocity
-        ? computeVelocitySeries(depthData)
-        : depthData;
-
-      return {
-        backgroundColor: "transparent",
-        tooltip: {
-          trigger: "axis",
-          backgroundColor: "rgba(13, 17, 23, 0.9)",
-          borderColor: "rgba(255, 255, 255, 0.12)",
-          borderWidth: 1,
-          textStyle: { color: "#e6edf3", fontSize: 12 },
-          valueFormatter: (value) => {
-            if (typeof value !== "number") return String(value ?? "");
-            return showVelocity
-              ? `${value.toFixed(2)} m/s`
-              : `${Math.abs(value).toFixed(1)} m`;
-          },
-        },
-        grid: {
-          left: showVelocity ? 68 : 60,
-          right: 16,
-          top: 44,
-          bottom: 40,
-        },
-        xAxis: {
-          type: "value",
-          name: "Time (sec)",
-          nameLocation: "middle",
-          nameGap: 28,
-          nameTextStyle: { color: "#8b949e", fontSize: 13 },
-          axisLine: { lineStyle: { color: "#30363d" } },
-          axisLabel: { color: "#8b949e" },
-          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
-        },
-        yAxis: {
-          type: "value",
-          name: showVelocity ? "Velocity (m/s)" : "Depth (m)",
-          nameLocation: "middle",
-          nameGap: showVelocity ? 50 : 42,
-          nameTextStyle: { color: "#8b949e", fontSize: 13 },
-          axisLine: { lineStyle: { color: "#30363d" } },
-          axisLabel: { color: "#8b949e" },
-          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
-        },
-        series: [
-          {
-            type: "line" as const,
-            data: primaryData,
-            smooth: true,
-            showSymbol: false,
-            itemStyle: { color },
-            lineStyle: {
-              width: 2.5,
-              color,
-              shadowBlur: 12,
-              shadowColor,
-            },
-            ...(showVelocity
-              ? {
-                  markLine: {
-                    silent: true,
-                    symbol: "none",
-                    lineStyle: {
-                      color: "rgba(139, 148, 158, 0.45)",
-                      type: "dashed" as const,
-                    },
-                    data: [{ yAxis: 0 }],
-                  },
-                }
-              : {
-                  areaStyle: {
-                    color: {
-                      type: "linear" as const,
-                      x: 0,
-                      y: 0,
-                      x2: 0,
-                      y2: 1,
-                      colorStops: [
-                        { offset: 0, color: resolveShadowColor(0, 0.2) },
-                        { offset: 1, color: resolveShadowColor(0, 0) },
-                      ],
-                    },
-                  },
-                }),
-          },
-        ],
-        animation: false,
-      };
+      return {};
     }
 
     if (isTimeline && timelineCategories) {
@@ -507,43 +534,38 @@ export default function Chart2D({
     clampedActive,
     groupingConfig?.groupMode,
     isBarChart,
-    isSingleDive,
     isTimeline,
     series,
-    singleDiveMetric,
     timelineCategories,
     timelineMetric,
   ]);
 
-  if (isSingleDive) {
+  if (isSingleDive && singleDiveCharts) {
     return (
-      <div className="chart-container chart-container--single">
-        <div className="chart-single-toolbar">
-          <div className="segment-buttons chart-metric-toggle">
-            <button
-              type="button"
-              className={singleDiveMetric === "depth" ? "active" : ""}
-              onClick={() => setSingleDiveMetric("depth")}
-            >
-              Depth
-            </button>
-            <button
-              type="button"
-              className={singleDiveMetric === "velocity" ? "active" : ""}
-              onClick={() => setSingleDiveMetric("velocity")}
-            >
-              Velocity
-            </button>
+      <div className="chart-single-stack">
+        <div className="chart-container chart-container--single">
+          <h3 className="chart-single-header">Depth</h3>
+          <div className="chart-plot chart-plot--single">
+            <ReactECharts
+              option={singleDiveCharts.depth}
+              notMerge={true}
+              style={{ height: "100%", width: "100%" }}
+              opts={{ renderer: "canvas" }}
+              theme="dark"
+            />
           </div>
         </div>
-        <div className="chart-plot">
-          <ReactECharts
-            option={option}
-            notMerge={true}
-            style={{ height: "100%", width: "100%" }}
-            opts={{ renderer: "canvas" }}
-            theme="dark"
-          />
+        <div className="chart-container chart-container--single">
+          <h3 className="chart-single-header">Velocity</h3>
+          <div className="chart-plot chart-plot--single">
+            <ReactECharts
+              option={singleDiveCharts.velocity}
+              notMerge={true}
+              style={{ height: "100%", width: "100%" }}
+              opts={{ renderer: "canvas" }}
+              theme="dark"
+            />
+          </div>
         </div>
       </div>
     );

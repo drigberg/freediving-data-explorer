@@ -214,7 +214,7 @@ export default function GroupingControls({
             <div className="grouping-row">
               <span className="grouping-label">Display</span>
               <SegmentButtons<DisplayMode>
-                options={["average", "maximum"]}
+                options={["maximum", "average"]}
                 value={config.displayMode}
                 onChange={(displayMode) => update({ displayMode })}
                 labels={{ average: "Average", maximum: "Maximum" }}
@@ -225,7 +225,7 @@ export default function GroupingControls({
               <div className="grouping-row">
                 <span className="grouping-label">Pick</span>
                 <SegmentButtons<RankCriterion>
-                  options={["longest", "deepest"]}
+                  options={["deepest", "longest"]}
                   value={config.maximumCriterion}
                   onChange={(maximumCriterion) => update({ maximumCriterion })}
                   labels={{ longest: "Longest", deepest: "Deepest" }}

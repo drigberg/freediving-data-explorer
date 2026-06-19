@@ -70,8 +70,8 @@ export function defaultGroupingConfig(): GroupingConfig {
     dateIntervalUnit: "month",
     temperatureIncrement: 5,
     temperatureMode: "max",
-    displayMode: "average",
-    maximumCriterion: "longest",
+    displayMode: "maximum",
+    maximumCriterion: "deepest",
     aggregationMode: "none",
   };
 }

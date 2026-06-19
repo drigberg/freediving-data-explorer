@@ -449,6 +449,10 @@ body,
 .app-body--dive-list-expanded .app-main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow-y: auto;
 }
 
 /* ── Sidebar ── */
@@ -1346,34 +1350,36 @@ body,
   border-radius: 14px;
 }
 
+.chart-single-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  height: auto;
+  flex-shrink: 0;
+}
+
 .chart-container--single {
-  padding: 12px;
-  gap: 0;
+  gap: 8px;
   position: relative;
+  width: 100%;
+  height: auto;
+  flex-shrink: 0;
 }
 
-.chart-single-toolbar {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
+.chart-single-header {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e6edf3;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
 }
 
-.chart-metric-toggle {
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(13, 17, 23, 0.82);
-  backdrop-filter: blur(8px);
-}
-
-.chart-metric-toggle button {
-  padding: 4px 10px;
-  font-size: 0.72rem;
-}
-
-.chart-container--single .chart-plot {
+.chart-container--single .chart-plot--single {
+  width: 100%;
+  aspect-ratio: 3 / 2;
   min-height: 0;
+  flex: none;
 }
 
 .chart-container {
@@ -1410,6 +1416,10 @@ body,
 .chart-view-toggle button {
   padding: 4px 10px;
   font-size: 0.72rem;
+}
+
+.chart-container.chart-container--single {
+  height: auto;
 }
 
 .chart-plot {
