@@ -13,6 +13,7 @@ import {
   loadStore,
   mergeUddfIntoStore,
   saveStore,
+  downloadStoreAsJson,
   setDiveDisciplines,
   setDiveExposureSuits,
   setDiveWeights,
@@ -173,6 +174,11 @@ export default function App() {
     fileInputRef.current?.click();
   };
 
+  const handleExportClick = useCallback(() => {
+    if (!store) return;
+    downloadStoreAsJson(store);
+  }, [store]);
+
   const handleFileSelected = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? []);
@@ -291,6 +297,9 @@ export default function App() {
           )}
           <button className="import-btn" onClick={handleImportClick}>
             Import dives
+          </button>
+          <button className="import-btn" onClick={handleExportClick}>
+            Export data
           </button>
           <input
             ref={fileInputRef}

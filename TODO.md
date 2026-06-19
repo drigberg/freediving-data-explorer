@@ -1,15 +1,13 @@
 - Dive detail mode
   - Show thermocline somehow?
+  - "Visualization mode": show a diver on a vertical line, and move it according to dive data, with "play" and "pause" buttons, plus a slider to click and drag through time.
+    - Bonus: bubbles and jellyfish
+- Data:
+  - Allow importing existing config file
+  - Store data in local storage?
+- Show some sort of chart titles (possibly calculated)
 - Fix flicker when switching between modes
 - Allow editing and removing tags for individual dives
 - Allow adding tags for all dives by date
 - Allow adding tags for all dives matching current filters
 - "Add discipline" button for individual dives
-- Timeline mode:
-  - Time interval: day/month/quarter/year
-  - Group by:
-    - Discipline
-    - Exposure suit
-  - Aggregation:
-    - Longest
-    - Deepest
