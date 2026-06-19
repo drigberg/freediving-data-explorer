@@ -365,6 +365,7 @@ export default function App() {
           ) : processed.series.length > 0 ? (
             <Chart2D
               groupingConfig={groupingConfig}
+              onGroupingConfigChange={setGroupingConfig}
               processed={processed}
               visibleIndices={visibleIndices}
               activeDiveIndex={activeSidebarDive}

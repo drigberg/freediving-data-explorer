@@ -61,48 +61,74 @@ export default function GroupingControls({
     filters,
     availableDisciplines,
   );
+  const isTimeline = config.viewMode === "timeline";
+
+  const groupModeOptions: GroupMode[] = isTimeline
+    ? ["none", "discipline", "weight", "exposureSuit", "temperature"]
+    : [
+        "none",
+        "discipline",
+        "dateInterval",
+        "weight",
+        "exposureSuit",
+        "temperature",
+      ];
 
   return (
     <div className="grouping-controls">
-      <div className="grouping-row">
-        <span className="grouping-label">Preset</span>
-        <select
-          className="grouping-preset-select"
-          value={activePreset?.id ?? ""}
-          onChange={(e) => {
-            const presetId = e.target.value;
-            e.target.blur();
-            if (!presetId) return;
-            const preset = GROUPING_PRESETS.find((p) => p.id === presetId);
-            if (!preset) return;
-            onChange(preset.config);
-            onFiltersChange(
-              resolvePresetFilters(preset.filters, availableDisciplines),
-            );
-          }}
-        >
-          {activePreset ? null : <option value="">Custom</option>}
-          {GROUPING_PRESETS.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {isTimeline ? (
+        <div className="grouping-row">
+          <span className="grouping-label">Time interval</span>
+          <SegmentButtons<DateIntervalUnit>
+            options={["day", "month", "quarter", "year"]}
+            value={config.dateIntervalUnit}
+            onChange={(dateIntervalUnit) => update({ dateIntervalUnit })}
+            labels={{
+              day: "Day",
+              month: "Month",
+              quarter: "Quarter",
+              year: "Year",
+            }}
+          />
+        </div>
+      ) : (
+        <div className="grouping-row">
+          <span className="grouping-label">Preset</span>
+          <select
+            className="grouping-preset-select"
+            value={activePreset?.id ?? ""}
+            onChange={(e) => {
+              const presetId = e.target.value;
+              e.target.blur();
+              if (!presetId) return;
+              const preset = GROUPING_PRESETS.find((p) => p.id === presetId);
+              if (!preset) return;
+              onChange(preset.config);
+              onFiltersChange(
+                resolvePresetFilters(preset.filters, availableDisciplines),
+              );
+            }}
+          >
+            {activePreset ? null : <option value="">Custom</option>}
+            {GROUPING_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grouping-manual">
         <div className="grouping-row">
           <span className="grouping-label">Group by</span>
           <SegmentButtons<GroupMode>
-            options={[
-              "none",
-              "discipline",
-              "dateInterval",
-              "weight",
-              "exposureSuit",
-              "temperature",
-            ]}
-            value={config.groupMode}
+            options={groupModeOptions}
+            value={
+              isTimeline && config.groupMode === "dateInterval"
+                ? "none"
+                : config.groupMode
+            }
             onChange={(groupMode) =>
               update({
                 groupMode,
@@ -120,7 +146,7 @@ export default function GroupingControls({
           />
         </div>
 
-        {config.groupMode === "dateInterval" && (
+        {!isTimeline && config.groupMode === "dateInterval" && (
           <div className="grouping-row">
             <span className="grouping-label">Interval</span>
             <SegmentButtons<DateIntervalUnit>
@@ -166,7 +192,7 @@ export default function GroupingControls({
           </>
         )}
 
-        {config.groupMode !== "none" && (
+        {config.groupMode !== "none" && !isTimeline && (
           <div className="grouping-row">
             <span className="grouping-label">Aggregation</span>
             <SegmentButtons<AggregationMode>
@@ -182,7 +208,8 @@ export default function GroupingControls({
           </div>
         )}
 
-        {config.groupMode !== "none" && config.aggregationMode === "none" && (
+        {(isTimeline ||
+          (config.groupMode !== "none" && config.aggregationMode === "none")) && (
           <>
             <div className="grouping-row">
               <span className="grouping-label">Display</span>

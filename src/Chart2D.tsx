@@ -5,6 +5,7 @@ import {
   chartSeriesIndexForGlobalDive,
   GroupingConfig,
   type ProcessedData,
+  type ChartViewMode,
 } from "./grouping";
 import {
   colorWithAlpha,
@@ -20,6 +21,7 @@ interface Chart2DProps {
   activeDiveIndex?: number | null;
   onActiveDiveChange?: (globalDiveIndex: number) => void;
   groupingConfig?: GroupingConfig;
+  onGroupingConfigChange?: (config: GroupingConfig) => void;
   variant?: "default" | "single";
 }
 
@@ -39,11 +41,15 @@ export default function Chart2D({
   activeDiveIndex,
   onActiveDiveChange,
   groupingConfig,
+  onGroupingConfigChange,
   variant = "default",
 }: Chart2DProps) {
-  const { series, chartMode, aggregationMetric } = processed;
+  const { series, chartMode, aggregationMetric, timelineMetric, timelineCategories } =
+    processed;
   const isSingleDive = variant === "single";
   const isBarChart = chartMode === "bar";
+  const isTimeline = chartMode === "timeline";
+  const viewMode = groupingConfig?.viewMode ?? "diveProfile";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
   const [singleDiveMetric, setSingleDiveMetric] =
@@ -114,6 +120,22 @@ export default function Chart2D({
       globalout: handleSeriesMouseOut,
     }),
     [handleSeriesClick, handleSeriesMouseOver, handleSeriesMouseOut],
+  );
+
+  const handleViewModeChange = useCallback(
+    (nextViewMode: ChartViewMode) => {
+      if (!groupingConfig || !onGroupingConfigChange) return;
+      onGroupingConfigChange({
+        ...groupingConfig,
+        viewMode: nextViewMode,
+        aggregationMode: "none",
+        ...(nextViewMode === "timeline" &&
+        groupingConfig.groupMode === "dateInterval"
+          ? { groupMode: "none" }
+          : {}),
+      });
+    },
+    [groupingConfig, onGroupingConfigChange],
   );
 
   const option = useMemo<EChartsOption>(() => {
@@ -221,6 +243,100 @@ export default function Chart2D({
                 }),
           },
         ],
+        animation: false,
+      };
+    }
+
+    if (isTimeline && timelineCategories) {
+      const yAxisName =
+        timelineMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+      const showLegend =
+        groupingConfig?.groupMode !== "none" && series.length > 1;
+
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          borderColor: ACTIVE_LINE_COLOR,
+          borderWidth: 1,
+          textStyle: { color: "#e6edf3", fontSize: 12 },
+          valueFormatter: (value) => {
+            if (typeof value !== "number") return String(value ?? "");
+            return timelineMetric === "duration"
+              ? `${Math.floor(value / 60)}m${String(Math.round(value % 60)).padStart(2, "0")}s`
+              : `${value.toFixed(1)} m`;
+          },
+        },
+        legend: showLegend
+          ? {
+              data: series.map((s) => s.label),
+              textStyle: { color: "#8b949e", fontSize: 11 },
+              top: 4,
+              type: "scroll",
+              pageTextStyle: { color: "#8b949e" },
+            }
+          : undefined,
+        grid: {
+          left: 60,
+          right: 24,
+          top: showLegend ? 50 : 24,
+          bottom: timelineCategories.length > 8 ? 60 : 40,
+        },
+        xAxis: {
+          type: "category",
+          data: timelineCategories,
+          name: "Time interval",
+          nameLocation: "middle",
+          nameGap: timelineCategories.length > 8 ? 42 : 28,
+          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: {
+            color: "#8b949e",
+            rotate: timelineCategories.length > 8 ? 35 : 0,
+            interval: 0,
+          },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "value",
+          name: yAxisName,
+          nameLocation: "middle",
+          nameGap: 48,
+          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: { color: "#8b949e" },
+          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+        },
+        series: series.map((s, i) => {
+          const opacity = getSeriesOpacity(i, clampedActive, total);
+          const isActive = i === clampedActive;
+          const color = resolveColor(i);
+          const shadowColor = resolveShadowColor(i);
+
+          return {
+            name: s.label,
+            type: "line" as const,
+            data: timelineCategories.map((_, catIdx) => {
+              const point = s.data.find(([idx]) => idx === catIdx);
+              return point?.[1] ?? null;
+            }),
+            connectNulls: true,
+            smooth: false,
+            showSymbol: true,
+            symbolSize: isActive ? 8 : 5,
+            triggerLineEvent: true,
+            itemStyle: { color, opacity: isActive ? 1 : opacity },
+            lineStyle: {
+              width: isActive ? 3 : 1.5,
+              color,
+              opacity: isActive ? 1 : opacity,
+              shadowBlur: isActive ? 16 : 8,
+              shadowColor,
+            },
+            z: isActive ? 10 : 1,
+          };
+        }),
         animation: false,
       };
     }
@@ -392,8 +508,11 @@ export default function Chart2D({
     groupingConfig?.groupMode,
     isBarChart,
     isSingleDive,
+    isTimeline,
     series,
     singleDiveMetric,
+    timelineCategories,
+    timelineMetric,
   ]);
 
   if (isSingleDive) {
@@ -462,28 +581,50 @@ export default function Chart2D({
 
   return (
     <div className="chart-container">
-      <div className="slider-container">
-        <label className="slider-label">
-          Active: <strong>{activeSeries.label}</strong>
-          <span className="slider-stats">{statsText}</span>
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={series.length - 1}
-          value={clampedActive}
-          onChange={(e) => setActiveIndex(Number(e.target.value))}
-          onMouseUp={(e) => notifyActiveDive(Number(e.currentTarget.value))}
-          onTouchEnd={(e) => notifyActiveDive(Number(e.currentTarget.value))}
-          className="series-slider"
-        />
-        <div className="slider-endpoints">
-          <span>{series[0].label}</span>
-          <span>{series[series.length - 1].label}</span>
+      {groupingConfig && onGroupingConfigChange && (
+        <div className="chart-view-toolbar">
+          <div className="segment-buttons chart-view-toggle">
+            <button
+              type="button"
+              className={viewMode === "diveProfile" ? "active" : ""}
+              onClick={() => handleViewModeChange("diveProfile")}
+            >
+              Dive profile
+            </button>
+            <button
+              type="button"
+              className={viewMode === "timeline" ? "active" : ""}
+              onClick={() => handleViewModeChange("timeline")}
+            >
+              Timeline
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+      {!isTimeline && (
+        <div className="slider-container">
+          <label className="slider-label">
+            Active: <strong>{activeSeries.label}</strong>
+            <span className="slider-stats">{statsText}</span>
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={series.length - 1}
+            value={clampedActive}
+            onChange={(e) => setActiveIndex(Number(e.target.value))}
+            onMouseUp={(e) => notifyActiveDive(Number(e.currentTarget.value))}
+            onTouchEnd={(e) => notifyActiveDive(Number(e.currentTarget.value))}
+            className="series-slider"
+          />
+          <div className="slider-endpoints">
+            <span>{series[0].label}</span>
+            <span>{series[series.length - 1].label}</span>
+          </div>
+        </div>
+      )}
       <div
-        className={`chart-plot${!isBarChart && hoveringLine ? " chart-plot--hover-line" : ""}`}
+        className={`chart-plot${!isBarChart && !isTimeline && hoveringLine ? " chart-plot--hover-line" : ""}`}
       >
         <ReactECharts
           option={option}

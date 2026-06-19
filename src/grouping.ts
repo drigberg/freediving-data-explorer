@@ -23,8 +23,10 @@ export type TemperatureMode = "max" | "min" | "difference";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
 export type AggregationMode = "none" | "distance" | "duration";
+export type ChartViewMode = "diveProfile" | "timeline";
 
 export interface GroupingConfig {
+  viewMode: ChartViewMode;
   groupMode: GroupMode;
   dateIntervalUnit: DateIntervalUnit;
   temperatureIncrement: TemperatureIncrement;
@@ -54,13 +56,16 @@ export interface ProcessedSeries {
 }
 
 export interface ProcessedData {
-  chartMode: "line" | "bar";
+  chartMode: "line" | "bar" | "timeline";
   aggregationMetric?: "distance" | "duration";
+  timelineMetric?: "depth" | "duration";
+  timelineCategories?: string[];
   series: ProcessedSeries[];
 }
 
 export function defaultGroupingConfig(): GroupingConfig {
   return {
+    viewMode: "diveProfile",
     groupMode: "none",
     dateIntervalUnit: "month",
     temperatureIncrement: 5,
@@ -99,6 +104,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
     id: "personal-bests",
     label: "Current personal bests",
     config: {
+      viewMode: "diveProfile",
       groupMode: "discipline",
       dateIntervalUnit: "month",
       temperatureIncrement: 5,
@@ -115,6 +121,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
     id: "longest-dive-by-day",
     label: "Longest dive per day",
     config: {
+      viewMode: "diveProfile",
       groupMode: "dateInterval",
       dateIntervalUnit: "day",
       temperatureIncrement: 5,
@@ -128,6 +135,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
     id: "thermocline",
     label: "Average dive by thermocline",
     config: {
+      viewMode: "diveProfile",
       groupMode: "temperature",
       dateIntervalUnit: "month",
       temperatureIncrement: 5,
@@ -141,6 +149,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
     id: "distance-by-discipline",
     label: "Total vertical distance swum by discipline",
     config: {
+      viewMode: "diveProfile",
       groupMode: "discipline",
       dateIntervalUnit: "month",
       temperatureIncrement: 5,
@@ -154,6 +163,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
     id: "deepest-by-month",
     label: "Deepest dive by month",
     config: {
+      viewMode: "diveProfile",
       groupMode: "dateInterval",
       dateIntervalUnit: "month",
       temperatureIncrement: 5,
@@ -170,6 +180,7 @@ export function groupingConfigsEqual(
   b: GroupingConfig,
 ): boolean {
   return (
+    a.viewMode === b.viewMode &&
     a.groupMode === b.groupMode &&
     a.dateIntervalUnit === b.dateIntervalUnit &&
     a.temperatureIncrement === b.temperatureIncrement &&
@@ -538,6 +549,161 @@ function seriesDisciplineColor(
   return getDisciplineColor(data.disciplines[primaryDiveIndex]);
 }
 
+function dateIntervalStartDate(date: Date, unit: DateIntervalUnit): Date {
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  switch (unit) {
+    case "day":
+      return new Date(y, m, date.getDate());
+    case "month":
+      return new Date(y, m, 1);
+    case "quarter":
+      return new Date(y, Math.floor(m / 3) * 3, 1);
+    case "year":
+      return new Date(y, 0, 1);
+  }
+}
+
+type DateBucket = { key: string; sortDate: Date; indices: number[] };
+
+function collectDateIntervals(
+  data: DiveData,
+  indices: number[],
+  unit: DateIntervalUnit,
+): DateBucket[] {
+  const buckets = new Map<string, DateBucket>();
+
+  for (const i of indices) {
+    const date = parseDate(data.seriesNames[i]);
+    const key = date ? dateIntervalKey(date, unit) : "Unknown";
+    const sortDate = date ? dateIntervalStartDate(date, unit) : new Date(0);
+    if (!buckets.has(key)) {
+      buckets.set(key, { key, sortDate, indices: [] });
+    }
+    buckets.get(key)!.indices.push(i);
+  }
+
+  return [...buckets.values()].sort(
+    (a, b) => a.sortDate.getTime() - b.sortDate.getTime(),
+  );
+}
+
+function timelineMetric(config: GroupingConfig): "depth" | "duration" {
+  if (config.displayMode === "average") return "depth";
+  return config.maximumCriterion === "longest" ? "duration" : "depth";
+}
+
+function metricForInterval(
+  seriesData: ProfilePoint[][],
+  indices: number[],
+  config: GroupingConfig,
+): { value: number; primaryIndex: number } {
+  if (indices.length === 0) {
+    return { value: 0, primaryIndex: 0 };
+  }
+  if (config.displayMode === "average") {
+    const value =
+      indices.reduce((sum, i) => sum + Math.abs(getMaxDepth(seriesData[i])), 0) /
+      indices.length;
+    return { value, primaryIndex: Math.max(...indices) };
+  }
+  if (config.maximumCriterion === "longest") {
+    let best = indices[0];
+    let bestDur = getDuration(seriesData[indices[0]]);
+    for (const i of indices) {
+      const d = getDuration(seriesData[i]);
+      if (d > bestDur) {
+        bestDur = d;
+        best = i;
+      }
+    }
+    return { value: bestDur, primaryIndex: best };
+  }
+  let best = indices[0];
+  let bestDepth = getMaxDepth(seriesData[indices[0]]);
+  for (const i of indices) {
+    const d = getMaxDepth(seriesData[i]);
+    if (d < bestDepth) {
+      bestDepth = d;
+      best = i;
+    }
+  }
+  return { value: Math.abs(bestDepth), primaryIndex: best };
+}
+
+function resolvePrimaryGroups(data: DiveData, config: GroupingConfig): Group[] {
+  if (config.groupMode === "none" || config.groupMode === "dateInterval") {
+    return [
+      {
+        label: "All dives",
+        indices: data.seriesNames.map((_, i) => i),
+      },
+    ];
+  }
+  return resolveGroups(data, config);
+}
+
+function processTimelineData(
+  data: DiveData,
+  config: GroupingConfig,
+): ProcessedData {
+  const allIndices = data.seriesNames.map((_, i) => i);
+  const globalBuckets = collectDateIntervals(
+    data,
+    allIndices,
+    config.dateIntervalUnit,
+  );
+  const categories = globalBuckets.map((b) => b.key);
+  const metric = timelineMetric(config);
+  const primaryGroups = resolvePrimaryGroups(data, config);
+  const showLegend = config.groupMode !== "none";
+
+  const series: ProcessedSeries[] = primaryGroups.map((group) => {
+    const groupBuckets = collectDateIntervals(
+      data,
+      group.indices,
+      config.dateIntervalUnit,
+    );
+    const bucketMap = new Map(groupBuckets.map((b) => [b.key, b.indices]));
+
+    let primaryDiveIndex = group.indices[0] ?? 0;
+    const points: [number, number][] = [];
+
+    for (let idx = 0; idx < categories.length; idx++) {
+      const cat = categories[idx];
+      const indices = bucketMap.get(cat);
+      if (!indices?.length) continue;
+
+      const { value, primaryIndex } = metricForInterval(
+        data.seriesData,
+        indices,
+        config,
+      );
+      primaryDiveIndex = primaryIndex;
+      const rounded =
+        metric === "depth"
+          ? Math.round(value * 10) / 10
+          : Math.round(value * 10) / 10;
+      points.push([idx, rounded]);
+    }
+
+    return {
+      label: showLegend ? group.label : "All dives",
+      data: points,
+      primaryDiveIndex,
+      diveIndices: group.indices,
+      color: seriesDisciplineColor(data, config, group, primaryDiveIndex),
+    };
+  });
+
+  return {
+    chartMode: "timeline",
+    timelineMetric: metric,
+    timelineCategories: categories,
+    series,
+  };
+}
+
 // ── Main processing ──
 
 function resolveGroups(data: DiveData, config: GroupingConfig): Group[] {
@@ -609,6 +775,10 @@ export function processData(
   data: DiveData,
   config: GroupingConfig,
 ): ProcessedData {
+  if (config.viewMode === "timeline") {
+    return processTimelineData(data, config);
+  }
+
   if (config.aggregationMode !== "none") {
     return processAggregatedData(data, config);
   }
