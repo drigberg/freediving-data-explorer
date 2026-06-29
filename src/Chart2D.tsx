@@ -14,6 +14,7 @@ import {
   getSeriesOpacity,
 } from "./colors";
 import { computeVelocitySeries } from "./diveStats";
+import { useMediaQuery } from "./useMediaQuery";
 
 interface Chart2DProps {
   processed: ProcessedData;
@@ -38,11 +39,12 @@ function buildSingleDiveChartOption(
   metric: "depth" | "velocity",
   color: string,
   shadowColor: string,
+  isMobile = false,
+  compact = false,
+  showAxisNames = true,
 ): EChartsOption {
   const isVelocity = metric === "velocity";
-  const primaryData = isVelocity
-    ? computeVelocitySeries(depthData)
-    : depthData;
+  const primaryData = isVelocity ? computeVelocitySeries(depthData) : depthData;
 
   return {
     backgroundColor: "transparent",
@@ -51,7 +53,7 @@ function buildSingleDiveChartOption(
       backgroundColor: "rgba(13, 17, 23, 0.9)",
       borderColor: "rgba(255, 255, 255, 0.12)",
       borderWidth: 1,
-      textStyle: { color: "#e6edf3", fontSize: 12 },
+      textStyle: { color: "#e6edf3", fontSize: compact ? 11 : 12 },
       valueFormatter: (value) => {
         if (typeof value !== "number") return String(value ?? "");
         return isVelocity
@@ -60,27 +62,27 @@ function buildSingleDiveChartOption(
       },
     },
     grid: {
-      left: isVelocity ? 68 : 60,
-      right: 16,
-      top: 16,
-      bottom: 40,
+      left: compact ? (isVelocity ? 52 : 44) : isVelocity ? 68 : 60,
+      right: compact ? 8 : 16,
+      top: compact ? 12 : 16,
+      bottom: compact ? 32 : 40,
     },
     xAxis: {
       type: "value",
-      name: "Time (sec)",
+      name: showAxisNames ? "Time (sec)" : "",
       nameLocation: "middle",
-      nameGap: 28,
-      nameTextStyle: { color: "#8b949e", fontSize: 13 },
+      nameGap: compact ? 22 : 28,
+      nameTextStyle: { color: "#8b949e", fontSize: compact ? 11 : 13 },
       axisLine: { lineStyle: { color: "#30363d" } },
       axisLabel: { color: "#8b949e" },
       splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
     },
     yAxis: {
       type: "value",
-      name: isVelocity ? "Velocity (m/s)" : "Depth (m)",
+      name: showAxisNames ? (isVelocity ? "Velocity (m/s)" : "Depth (m)") : "",
       nameLocation: "middle",
-      nameGap: isVelocity ? 50 : 42,
-      nameTextStyle: { color: "#8b949e", fontSize: 13 },
+      nameGap: compact ? (isVelocity ? 40 : 34) : isVelocity ? 50 : 42,
+      nameTextStyle: { color: "#8b949e", fontSize: compact ? 11 : 13 },
       axisLine: { lineStyle: { color: "#30363d" } },
       axisLabel: { color: "#8b949e" },
       splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
@@ -93,7 +95,7 @@ function buildSingleDiveChartOption(
         showSymbol: false,
         itemStyle: { color },
         lineStyle: {
-          width: 2.5,
+          width: isMobile ? 1.5 : 2.5,
           color,
           shadowBlur: 12,
           shadowColor,
@@ -140,8 +142,16 @@ export default function Chart2D({
   onGroupingConfigChange,
   variant = "default",
 }: Chart2DProps) {
-  const { series, chartMode, aggregationMetric, timelineMetric, timelineCategories } =
-    processed;
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const mobileLineWidthActive = isMobile ? 2 : 3;
+  const mobileLineWidthInactive = isMobile ? 1 : 1.5;
+  const {
+    series,
+    chartMode,
+    aggregationMetric,
+    timelineMetric,
+    timelineCategories,
+  } = processed;
   const isSingleDive = variant === "single";
   const isBarChart = chartMode === "bar";
   const isTimeline = chartMode === "timeline";
@@ -247,15 +257,21 @@ export default function Chart2D({
         "depth",
         color,
         shadowColor,
+        isMobile,
+        false,
+        !isMobile,
       ),
       velocity: buildSingleDiveChartOption(
         depthData,
         "velocity",
         color,
         shadowColor,
+        isMobile,
+        false,
+        !isMobile,
       ),
     };
-  }, [isSingleDive, series]);
+  }, [isSingleDive, isMobile, series]);
 
   const option = useMemo<EChartsOption>(() => {
     const total = series.length;
@@ -305,18 +321,32 @@ export default function Chart2D({
             }
           : undefined,
         grid: {
-          left: 60,
-          right: 24,
-          top: showLegend ? 50 : 24,
-          bottom: timelineCategories.length > 8 ? 60 : 40,
+          left: isMobile ? 44 : 60,
+          right: isMobile ? 8 : 24,
+          top: showLegend ? (isMobile ? 44 : 50) : isMobile ? 16 : 24,
+          bottom:
+            timelineCategories.length > 8
+              ? isMobile
+                ? 52
+                : 60
+              : isMobile
+                ? 32
+                : 40,
         },
         xAxis: {
           type: "category",
           data: timelineCategories,
-          name: "Time interval",
+          name: isMobile ? "" : "Time interval",
           nameLocation: "middle",
-          nameGap: timelineCategories.length > 8 ? 42 : 28,
-          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          nameGap:
+            timelineCategories.length > 8
+              ? isMobile
+                ? 36
+                : 42
+              : isMobile
+                ? 22
+                : 28,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
           axisLine: { lineStyle: { color: "#30363d" } },
           axisLabel: {
             color: "#8b949e",
@@ -327,10 +357,10 @@ export default function Chart2D({
         },
         yAxis: {
           type: "value",
-          name: yAxisName,
+          name: isMobile ? "" : yAxisName,
           nameLocation: "middle",
-          nameGap: 48,
-          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          nameGap: isMobile ? 38 : 48,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
           axisLine: { lineStyle: { color: "#30363d" } },
           axisLabel: { color: "#8b949e" },
           splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
@@ -355,7 +385,7 @@ export default function Chart2D({
             triggerLineEvent: true,
             itemStyle: { color, opacity: isActive ? 1 : opacity },
             lineStyle: {
-              width: isActive ? 3 : 1.5,
+              width: isActive ? mobileLineWidthActive : mobileLineWidthInactive,
               color,
               opacity: isActive ? 1 : opacity,
               shadowBlur: isActive ? 16 : 8,
@@ -385,18 +415,18 @@ export default function Chart2D({
           axisPointer: { type: "shadow" },
         },
         grid: {
-          left: 60,
-          right: 24,
-          top: 24,
-          bottom: 60,
+          left: isMobile ? 44 : 60,
+          right: isMobile ? 8 : 24,
+          top: isMobile ? 16 : 24,
+          bottom: isMobile ? 52 : 60,
         },
         xAxis: {
           type: "category",
           data: series.map((s) => s.label),
-          name: "Group",
+          name: isMobile ? "" : "Group",
           nameLocation: "middle",
-          nameGap: 42,
-          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          nameGap: isMobile ? 36 : 42,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
           axisLine: { lineStyle: { color: "#30363d" } },
           axisLabel: {
             color: "#8b949e",
@@ -407,10 +437,10 @@ export default function Chart2D({
         },
         yAxis: {
           type: "value",
-          name: yAxisName,
+          name: isMobile ? "" : yAxisName,
           nameLocation: "middle",
-          nameGap: 48,
-          nameTextStyle: { color: "#8b949e", fontSize: 13 },
+          nameGap: isMobile ? 38 : 48,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
           axisLine: { lineStyle: { color: "#30363d" } },
           axisLabel: { color: "#8b949e" },
           splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
@@ -463,27 +493,27 @@ export default function Chart2D({
               pageTextStyle: { color: "#8b949e" },
             },
       grid: {
-        left: 60,
-        right: 24,
-        top: 50,
-        bottom: 40,
+        left: isMobile ? 44 : 60,
+        right: isMobile ? 8 : 24,
+        top: isMobile ? 44 : 50,
+        bottom: isMobile ? 32 : 40,
       },
       xAxis: {
         type: "value",
-        name: "Time (sec)",
+        name: isMobile ? "" : "Time (sec)",
         nameLocation: "middle",
-        nameGap: 28,
-        nameTextStyle: { color: "#8b949e", fontSize: 13 },
+        nameGap: isMobile ? 22 : 28,
+        nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
         axisLine: { lineStyle: { color: "#30363d" } },
         axisLabel: { color: "#8b949e" },
         splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
       },
       yAxis: {
         type: "value",
-        name: "Depth (m)",
+        name: isMobile ? "" : "Depth (m)",
         nameLocation: "middle",
-        nameGap: 42,
-        nameTextStyle: { color: "#8b949e", fontSize: 13 },
+        nameGap: isMobile ? 34 : 42,
+        nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
         axisLine: { lineStyle: { color: "#30363d" } },
         axisLabel: { color: "#8b949e" },
         splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
@@ -503,7 +533,7 @@ export default function Chart2D({
           triggerLineEvent: true,
           itemStyle: { color },
           lineStyle: {
-            width: isActive ? 3 : 1.5,
+            width: isActive ? mobileLineWidthActive : mobileLineWidthInactive,
             color,
             opacity: isActive ? 1 : opacity,
             shadowBlur: isActive ? 16 : 8,
@@ -534,6 +564,7 @@ export default function Chart2D({
     clampedActive,
     groupingConfig?.groupMode,
     isBarChart,
+    isMobile,
     isTimeline,
     series,
     timelineCategories,
@@ -554,6 +585,18 @@ export default function Chart2D({
               theme="dark"
             />
           </div>
+          {isMobile && (
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: "8px",
+                fontSize: "12px",
+                color: "#8b949e",
+              }}
+            >
+              Depth (m) vs Time (sec)
+            </div>
+          )}
         </div>
         <div className="chart-container chart-container--single">
           <h3 className="chart-single-header">Velocity</h3>
@@ -566,10 +609,49 @@ export default function Chart2D({
               theme="dark"
             />
           </div>
+          {isMobile && (
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: "8px",
+                fontSize: "12px",
+                color: "#8b949e",
+              }}
+            >
+              Velocity (m/s) vs Time (sec)
+            </div>
+          )}
         </div>
       </div>
     );
   }
+
+  // Build axis label text for mobile display
+  const getAxisLabelText = () => {
+    if (!isMobile) return "";
+
+    if (isSingleDive) {
+      // For single dive, determine which chart type is active based on the variant
+      // Since we're in single dive mode, show depth chart axis labels
+      return "Depth (m) vs Time (sec)";
+    }
+
+    if (isTimeline && timelineMetric) {
+      const yAxisName =
+        timelineMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+      return `${yAxisName} vs Time interval`;
+    }
+
+    if (isBarChart && aggregationMetric) {
+      const yAxisName =
+        aggregationMetric === "duration"
+          ? "Total duration (sec)"
+          : "Total distance swum vertically (m)";
+      return `${yAxisName} vs Group`;
+    }
+
+    return "Depth (m) vs Time (sec)";
+  };
 
   const activeSeries = series[clampedActive];
   const activePoints = activeSeries.data;
@@ -657,6 +739,18 @@ export default function Chart2D({
           onEvents={chartEvents}
         />
       </div>
+      {isMobile && getAxisLabelText() && (
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: "8px",
+            fontSize: "12px",
+            color: "#8b949e",
+          }}
+        >
+          {getAxisLabelText()}
+        </div>
+      )}
     </div>
   );
 }

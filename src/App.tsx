@@ -33,6 +33,7 @@ import GroupingControls from "./GroupingControls";
 import Sidebar from "./Sidebar";
 import Chart2D from "./Chart2D";
 import { getDisciplineColor } from "./disciplines";
+import { useMediaQuery } from "./useMediaQuery";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -49,7 +50,10 @@ export default function App() {
   );
   const [diveListExpanded, setDiveListExpanded] = useState(false);
   const [showArchivedDives, setShowArchivedDives] = useState(false);
+  const [showGroupingAndFiltering, setShowGroupingAndFiltering] =
+    useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
     loadStore().then((loaded) => {
@@ -311,26 +315,41 @@ export default function App() {
           />
         </div>
       </header>
-      {!diveListExpanded && (
-        <GroupingControls
-          config={groupingConfig}
-          filters={diveFilters}
-          availableDisciplines={filterOptions?.disciplines ?? []}
-          onChange={setGroupingConfig}
-          onFiltersChange={setDiveFilters}
-        />
+      {isMobile && (
+        <button
+          className="grouping-filter-toggle-btn"
+          onClick={() => setShowGroupingAndFiltering((prev) => !prev)}
+        >
+          {showGroupingAndFiltering
+            ? "Hide Grouping and Filtering Options"
+            : "Show Grouping and Filtering Options"}
+        </button>
       )}
-      {filterOptions && (
-        <FilterControls
-          filters={diveFilters}
-          options={filterOptions}
-          visibleCount={visibleIndices.length}
-          totalCount={data.seriesNames.length}
-          onChange={setDiveFilters}
-        />
+      {!diveListExpanded && (
+        <div
+          className="grouping-filter-wrapper"
+          data-show-options={isMobile && showGroupingAndFiltering}
+        >
+          <GroupingControls
+            config={groupingConfig}
+            filters={diveFilters}
+            availableDisciplines={filterOptions?.disciplines ?? []}
+            onChange={setGroupingConfig}
+            onFiltersChange={setDiveFilters}
+          />
+          {filterOptions && (
+            <FilterControls
+              filters={diveFilters}
+              options={filterOptions}
+              visibleCount={visibleIndices.length}
+              totalCount={data.seriesNames.length}
+              onChange={setDiveFilters}
+            />
+          )}
+        </div>
       )}
       <div
-        className={`app-body${diveListExpanded ? " app-body--dive-list-expanded" : ""}`}
+        className={`app-body${diveListExpanded ? " app-body--dive-list-expanded" : ""}${isMobile && showGroupingAndFiltering ? " app-body--options-shown" : ""}`}
       >
         <Sidebar
           groupingConfig={groupingConfig}
