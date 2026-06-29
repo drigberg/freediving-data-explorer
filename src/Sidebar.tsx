@@ -175,30 +175,6 @@ function PanelRightCloseIcon() {
   );
 }
 
-function LineGraphIcon({ isActive }: { isActive?: boolean } = {}) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className={isActive ? "line-graph-icon-active" : ""}
-    >
-      {/* Y-axis */}
-      <line x1="3" y1="3" x2="3" y2="21" />
-      {/* X-axis */}
-      <line x1="3" y1="21" x2="21" y2="21" />
-      {/* Line starting at origin (3,21), going up to (9,6), dipping down to (15,14), then up to (21,8) */}
-      <polyline points="3,21 9,6 15,14 21,8" />
-    </svg>
-  );
-}
-
 function formatDiveNumber(diveNumber: number): string {
   return diveNumber > 0 ? `#${diveNumber}` : "#?";
 }
@@ -749,19 +725,6 @@ export default function Sidebar({
         <td>{weight !== undefined ? `${weight}kg` : "—"}</td>
         <td>{exposureSuit ? formatExposureSuit(exposureSuit) : "—"}</td>
         <td>{diveTags.length > 0 ? diveTags.join(", ") : "—"}</td>
-        <td className="sidebar-dive-table-actions">
-          <button
-            type="button"
-            className={`dive-graph-btn${isActive ? " active" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDiveActivate(i);
-            }}
-            title="Show depth and velocity graphs for this dive"
-          >
-            <LineGraphIcon isActive={isActive} />
-          </button>
-        </td>
       </tr>
     );
   };
@@ -781,14 +744,13 @@ export default function Sidebar({
             <th>Weight</th>
             <th>Suit</th>
             <th>Tags</th>
-            <th aria-label="Graph" />
           </tr>
         </thead>
         <tbody>
           {filteredIncludedIndices.map((i) => renderDiveTableRow(i, false))}
           {!inSelectMode && filteredExcludedIndices.length > 0 && (
             <tr className="sidebar-dive-table-divider">
-              <td colSpan={11}>Excluded By Filters</td>
+              <td colSpan={10}>Excluded By Filters</td>
             </tr>
           )}
           {!inSelectMode &&

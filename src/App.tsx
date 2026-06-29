@@ -282,6 +282,7 @@ export default function App() {
       }
       if (!next) {
         setShowArchivedDives(false);
+        setActiveSidebarDive(null);
       }
       return next;
     });
