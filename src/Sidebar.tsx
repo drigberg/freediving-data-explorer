@@ -619,6 +619,15 @@ export default function Sidebar({
     return excludedIndices.filter((i) => archived?.[i] === true);
   }, [excludedIndices, showArchivedDives, archived]);
 
+  const handleSelectAllMatching = useCallback(() => {
+    // Select all dives that pass the current filters (included indices)
+    setSelection(new Set(includedIndices));
+  }, [includedIndices]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelection(new Set());
+  }, []);
+
   useEffect(() => {
     if (activeDiveIndex == null || !diveListExpanded) return;
 
@@ -851,6 +860,15 @@ export default function Sidebar({
             <strong>{assignModeDescription(assignMode).label}</strong>
           </span>
           <div className="sidebar-tag-actions">
+            <button
+              className="tag-action-btn"
+              onClick={handleSelectAllMatching}
+            >
+              Select All Matching Filters
+            </button>
+            <button className="tag-action-btn" onClick={handleDeselectAll}>
+              Deselect All
+            </button>
             <button className="tag-action-btn done" onClick={handleDone}>
               Done
             </button>
