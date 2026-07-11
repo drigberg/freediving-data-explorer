@@ -74,10 +74,10 @@ export default function FilterControls({
   return (
     <div className="filter-controls">
       <div className="filter-main">
-        <div className="filter-row">
+        <div className="filter-row filter-row--primary">
           <span className="grouping-label">Filter</span>
           {options.disciplines.length > 0 && (
-            <>
+            <div className="filter-group">
               <span className="filter-sublabel">Discipline</span>
               <FilterChips
                 values={options.disciplines}
@@ -90,10 +90,10 @@ export default function FilterControls({
                 formatLabel={disciplineAbbrev}
                 chipClassName={disciplineFilterChipClass}
               />
-            </>
+            </div>
           )}
           {options.weights.length > 0 && (
-            <>
+            <div className="filter-group">
               <span className="filter-sublabel">Weight</span>
               <FilterChips
                 values={options.weights.map(String)}
@@ -105,10 +105,10 @@ export default function FilterControls({
                 }
                 formatLabel={(weight) => `${weight}kg`}
               />
-            </>
+            </div>
           )}
           {options.exposureSuits.length > 0 && (
-            <>
+            <div className="filter-group">
               <span className="filter-sublabel">Exposure suit</span>
               <FilterChips
                 values={options.exposureSuits}
@@ -119,115 +119,121 @@ export default function FilterControls({
                   })
                 }
               />
-            </>
+            </div>
           )}
         </div>
 
         {(options.dateMin || options.dateMax) && (
           <div className="filter-row">
-            <span className="filter-sublabel">Date</span>
-            <input
-              type="date"
-              className="filter-date-input"
-              min={options.dateMin || undefined}
-              max={options.dateMax || undefined}
-              value={filters.dateFrom ?? ""}
-              onChange={(e) => update({ dateFrom: e.target.value || null })}
-              aria-label="From date"
-            />
-            <span className="filter-date-separator">to</span>
-            <input
-              type="date"
-              className="filter-date-input"
-              min={options.dateMin || undefined}
-              max={options.dateMax || undefined}
-              value={filters.dateTo ?? ""}
-              onChange={(e) => update({ dateTo: e.target.value || null })}
-              aria-label="To date"
-            />
+            <div className="filter-group">
+              <span className="filter-sublabel">Date</span>
+              <input
+                type="date"
+                className="filter-date-input"
+                min={options.dateMin || undefined}
+                max={options.dateMax || undefined}
+                value={filters.dateFrom ?? ""}
+                onChange={(e) => update({ dateFrom: e.target.value || null })}
+                aria-label="From date"
+              />
+              <span className="filter-date-separator">to</span>
+              <input
+                type="date"
+                className="filter-date-input"
+                min={options.dateMin || undefined}
+                max={options.dateMax || undefined}
+                value={filters.dateTo ?? ""}
+                onChange={(e) => update({ dateTo: e.target.value || null })}
+                aria-label="To date"
+              />
+            </div>
           </div>
         )}
 
         <div className="filter-row">
-          <span className="filter-sublabel">Duration (sec)</span>
-          <input
-            type="number"
-            className="filter-number-input"
-            min={options.durationMin}
-            max={options.durationMax}
-            step={1}
-            value={filters.duration.min ?? ""}
-            onChange={(e) =>
-              update({
-                duration: {
-                  ...filters.duration,
-                  min: parseNullableInt(e.target.value),
-                },
-              })
-            }
-            aria-label="Minimum duration in seconds"
-            placeholder="Min"
-          />
-          <span className="filter-date-separator">to</span>
-          <input
-            type="number"
-            className="filter-number-input"
-            min={options.durationMin}
-            max={options.durationMax}
-            step={1}
-            value={filters.duration.max ?? ""}
-            onChange={(e) =>
-              update({
-                duration: {
-                  ...filters.duration,
-                  max: parseNullableInt(e.target.value),
-                },
-              })
-            }
-            aria-label="Maximum duration in seconds"
-            placeholder="Max"
-          />
+          <div className="filter-group">
+            <span className="filter-sublabel">Duration (sec)</span>
+            <input
+              type="number"
+              className="filter-number-input"
+              min={options.durationMin}
+              max={options.durationMax}
+              step={1}
+              value={filters.duration.min ?? ""}
+              onChange={(e) =>
+                update({
+                  duration: {
+                    ...filters.duration,
+                    min: parseNullableInt(e.target.value),
+                  },
+                })
+              }
+              aria-label="Minimum duration in seconds"
+              placeholder="Min"
+            />
+            <span className="filter-date-separator">to</span>
+            <input
+              type="number"
+              className="filter-number-input"
+              min={options.durationMin}
+              max={options.durationMax}
+              step={1}
+              value={filters.duration.max ?? ""}
+              onChange={(e) =>
+                update({
+                  duration: {
+                    ...filters.duration,
+                    max: parseNullableInt(e.target.value),
+                  },
+                })
+              }
+              aria-label="Maximum duration in seconds"
+              placeholder="Max"
+            />
+          </div>
         </div>
 
         <div className="filter-row">
-          <span className="filter-sublabel">Max depth (m)</span>
-          <input
-            type="number"
-            className="filter-number-input"
-            min={options.maxDepthMin}
-            max={options.maxDepthMax}
-            step={1}
-            value={filters.maxDepth.min ?? ""}
-            onChange={(e) =>
-              update({
-                maxDepth: {
-                  ...filters.maxDepth,
-                  min: parseNullableInt(e.target.value),
-                },
-              })
-            }
-            aria-label="Minimum max depth in meters"
-            placeholder="Min"
-          />
-          <span className="filter-date-separator">to</span>
-          <input
-            type="number"
-            className="filter-number-input"
-            min={options.maxDepthMin}
-            max={options.maxDepthMax}
-            step={1}
-            value={filters.maxDepth.max ?? ""}
-            onChange={(e) =>
-              update({
-                maxDepth: {
-                  ...filters.maxDepth,
-                  max: parseNullableInt(e.target.value),
-                },
-              })
-            }
-            aria-label="Maximum max depth in meters"
-            placeholder="Max"
-          />
+          <div className="filter-group">
+            <span className="filter-sublabel">Max depth (m)</span>
+            <input
+              type="number"
+              className="filter-number-input"
+              min={options.maxDepthMin}
+              max={options.maxDepthMax}
+              step={1}
+              value={filters.maxDepth.min ?? ""}
+              onChange={(e) =>
+                update({
+                  maxDepth: {
+                    ...filters.maxDepth,
+                    min: parseNullableInt(e.target.value),
+                  },
+                })
+              }
+              aria-label="Minimum max depth in meters"
+              placeholder="Min"
+            />
+            <span className="filter-date-separator">to</span>
+            <input
+              type="number"
+              className="filter-number-input"
+              min={options.maxDepthMin}
+              max={options.maxDepthMax}
+              step={1}
+              value={filters.maxDepth.max ?? ""}
+              onChange={(e) =>
+                update({
+                  maxDepth: {
+                    ...filters.maxDepth,
+                    max: parseNullableInt(e.target.value),
+                  },
+                })
+              }
+              aria-label="Maximum max depth in meters"
+              placeholder="Max"
+            />
+          </div>
         </div>
       </div>
 

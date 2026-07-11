@@ -145,10 +145,17 @@ body,
 }
 
 .filter-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
 }
 
 .filter-sublabel {
@@ -1710,17 +1717,28 @@ body,
     }
 
     .filter-main {
-        flex-direction: row;
-        align-items: center;
-        gap: 6px 8px;
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
     }
 
     .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 6px;
+    }
+
+    .filter-row--primary .grouping-label {
+        margin-bottom: 2px;
+    }
+
+    .filter-group {
+        width: 100%;
         flex-direction: row;
         align-items: center;
         flex-wrap: wrap;
-        gap: 4px 6px;
+        gap: 6px 8px;
     }
 
     .filter-actions {
