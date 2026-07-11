@@ -1206,7 +1206,7 @@ export default function Chart2D({
               className={viewMode === "diveProfile" ? "active" : ""}
               onClick={() => handleViewModeChange("diveProfile")}
             >
-              Dive profile
+              Dive profiles
             </button>
             <button
               type="button"
