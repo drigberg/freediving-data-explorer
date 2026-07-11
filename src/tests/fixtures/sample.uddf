@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uddf xmlns="http://www.streumeding.de/uddf/2.0/">
+  <generator>
+    <informationbeforedive>
+      <datetime>2026-01-15T10:30:00Z</datetime>
+      <divenumber>42</divenumber>
+    </informationbeforedive>
+    <waypoint>
+      <divetime>0</divetime>
+      <depth>0.0</depth>
+    </waypoint>
+    <waypoint>
+      <divetime>10</divetime>
+      <depth>5.0</depth>
+      <temperature>283.15</temperature>
+    </waypoint>
+    <waypoint>
+      <divetime>20</divetime>
+      <depth>0.0</depth>
+    </waypoint>
+  </generator>
+</uddf>
