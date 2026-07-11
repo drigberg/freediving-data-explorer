@@ -274,19 +274,26 @@ export default function App() {
     };
   }, [activeSidebarDive, diveListExpanded, listData]);
 
-  const handleToggleDiveListExpanded = useCallback(() => {
-    setDiveListExpanded((prev) => {
-      const next = !prev;
-      if (next && activeSidebarDive == null && visibleIndices.length > 0) {
-        setActiveSidebarDive(visibleIndices[visibleIndices.length - 1]);
-      }
-      if (!next) {
+  const handleViewModeChange = useCallback(
+    (mode: "overview" | "diveDetails") => {
+      if (mode === "overview") {
+        setDiveListExpanded(false);
         setShowArchivedDives(false);
         setActiveSidebarDive(null);
+        return;
       }
-      return next;
-    });
-  }, [activeSidebarDive, visibleIndices]);
+
+      setDiveListExpanded(true);
+      if (activeSidebarDive == null && visibleIndices.length > 0) {
+        setActiveSidebarDive(visibleIndices[visibleIndices.length - 1]);
+      }
+    },
+    [activeSidebarDive, visibleIndices],
+  );
+
+  const handleSwitchToDiveDetails = useCallback(() => {
+    handleViewModeChange("diveDetails");
+  }, [handleViewModeChange]);
 
   if (!store || !data || !listData || !sidebarData || !groupingConfig) {
     return <div className="app-loading">Loading dives…</div>;
@@ -316,6 +323,24 @@ export default function App() {
           />
         </div>
       </header>
+      <div className="view-mode-toggle">
+        <div className="segment-buttons">
+          <button
+            type="button"
+            className={!diveListExpanded ? "active" : ""}
+            onClick={() => handleViewModeChange("overview")}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            className={diveListExpanded ? "active" : ""}
+            onClick={() => handleViewModeChange("diveDetails")}
+          >
+            Dive Details
+          </button>
+        </div>
+      </div>
       {isMobile && (
         <button
           className="grouping-filter-toggle-btn"
@@ -373,7 +398,7 @@ export default function App() {
           onArchiveDive={handleArchiveDive}
           diveFilters={diveFilters}
           diveListExpanded={diveListExpanded}
-          onToggleDiveListExpanded={handleToggleDiveListExpanded}
+          onSwitchToDiveDetails={handleSwitchToDiveDetails}
           showArchivedDives={showArchivedDives}
           onShowArchivedDivesChange={handleShowArchivedDivesChange}
         />

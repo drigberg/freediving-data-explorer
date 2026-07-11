@@ -48,7 +48,7 @@ interface SidebarProps {
   diveFilters: DiveFilterConfig;
   groupingConfig: GroupingConfig;
   diveListExpanded: boolean;
-  onToggleDiveListExpanded: () => void;
+  onSwitchToDiveDetails: () => void;
   showArchivedDives: boolean;
   onShowArchivedDivesChange: (checked: boolean) => void;
 }
@@ -135,46 +135,6 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
-function PanelRightOpenIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" />
-      <path d="M15 3v18" />
-      <path d="m10 9 3 3-3 3" />
-    </svg>
-  );
-}
-
-function PanelRightCloseIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" />
-      <path d="M15 3v18" />
-      <path d="m14 9-3 3 3 3" />
-    </svg>
-  );
-}
-
 function formatDiveNumber(diveNumber: number): string {
   return diveNumber > 0 ? `#${diveNumber}` : "#?";
 }
@@ -235,7 +195,7 @@ export default function Sidebar({
   diveFilters,
   groupingConfig,
   diveListExpanded,
-  onToggleDiveListExpanded,
+  onSwitchToDiveDetails,
   showArchivedDives,
   onShowArchivedDivesChange,
 }: SidebarProps) {
@@ -570,7 +530,7 @@ export default function Sidebar({
                 className="dive-details-btn"
                 onClick={() => {
                   onDiveActivate(i);
-                  onToggleDiveListExpanded();
+                  onSwitchToDiveDetails();
                 }}
               >
                 View Details
@@ -809,28 +769,6 @@ export default function Sidebar({
       <div className="sidebar-header">
         <div className="sidebar-header-title">
           <h2>Dives</h2>
-          <button
-            type="button"
-            className="sidebar-expand-btn"
-            onClick={onToggleDiveListExpanded}
-            disabled={inSelectMode}
-            title={
-              diveListExpanded
-                ? "Collapse dive list"
-                : "Expand dive details list"
-            }
-            aria-label={
-              diveListExpanded
-                ? "Collapse dive list"
-                : "Expand dive details list"
-            }
-          >
-            {diveListExpanded ? (
-              <PanelRightCloseIcon />
-            ) : (
-              <PanelRightOpenIcon />
-            )}
-          </button>
           {diveListExpanded && (
             <div className="filter-chips sidebar-header-chips">
               <button

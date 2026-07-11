@@ -80,6 +80,19 @@ body,
     color: #e6edf3;
 }
 
+/* ── View mode toggle ── */
+
+.view-mode-toggle {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.view-mode-toggle .segment-buttons button {
+  padding: 7px 16px;
+  font-size: 0.82rem;
+}
+
 /* ── Grouping and Filtering Toggle Button ── */
 
 .grouping-filter-toggle-btn {
@@ -530,33 +543,7 @@ body,
 }
 
 .sidebar-header-chips {
-    margin-left: 4px;
-}
-
-.sidebar-expand-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border-radius: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
-    color: #8b949e;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.sidebar-expand-btn:hover:not(:disabled) {
-    color: #e6edf3;
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-}
-
-.sidebar-expand-btn:disabled {
-    opacity: 0.4;
-    cursor: default;
+  margin-left: 4px;
 }
 
 .sidebar-header h2 {
