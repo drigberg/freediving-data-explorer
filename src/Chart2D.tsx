@@ -877,6 +877,9 @@ export default function Chart2D({
       };
     }
 
+    const showLegend =
+      groupingConfig?.groupMode !== "none" && series.length > 1;
+
     return {
       backgroundColor: "transparent",
       tooltip: {
@@ -887,20 +890,19 @@ export default function Chart2D({
         textStyle: { color: "#e6edf3", fontSize: 12 },
         valueFormatter: (value) => formatDepthTooltip(value),
       },
-      legend:
-        groupingConfig?.groupMode === "none"
-          ? undefined
-          : {
-              data: series.map((s) => s.label),
-              textStyle: { color: "#8b949e", fontSize: 11 },
-              top: 4,
-              type: "scroll",
-              pageTextStyle: { color: "#8b949e" },
-            },
+      legend: showLegend
+        ? {
+            data: series.map((s) => s.label),
+            textStyle: { color: "#8b949e", fontSize: 11 },
+            top: 4,
+            type: "scroll",
+            pageTextStyle: { color: "#8b949e" },
+          }
+        : undefined,
       grid: {
         left: isMobile ? 44 : 60,
         right: isMobile ? 8 : 24,
-        top: isMobile ? 44 : 50,
+        top: showLegend ? (isMobile ? 44 : 50) : isMobile ? 12 : 16,
         bottom: isMobile ? 32 : 40,
       },
       xAxis: {
@@ -1219,24 +1221,10 @@ export default function Chart2D({
         </div>
       )}
       {!isTimeline && (
-        <div className="slider-container">
-          <label className="slider-label">
-            Active: <strong>{activeSeries.label}</strong>
-            <span className="slider-stats">{statsText}</span>
-          </label>
-          <input
-            type="range"
-            min={0}
-            max={series.length - 1}
-            value={clampedActive}
-            onChange={(e) => setActiveIndex(Number(e.target.value))}
-            onMouseUp={(e) => notifyActiveDive(Number(e.currentTarget.value))}
-            onTouchEnd={(e) => notifyActiveDive(Number(e.currentTarget.value))}
-            className="series-slider"
-          />
-          <div className="slider-endpoints">
-            <span>{series[0].label}</span>
-            <span>{series[series.length - 1].label}</span>
+        <div className="selected-dive-info">
+          <div className="selected-dive-label">
+            Selected: <strong>{activeSeries.label}</strong>
+            <span className="selected-dive-stats">{statsText}</span>
           </div>
         </div>
       )}
