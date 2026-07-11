@@ -5,6 +5,7 @@ import {
   seriesNameFromDive,
   normalizeProfilePoints,
 } from "./parseData";
+import { parseFitArrayBuffer } from "./parseFit";
 import type { Tag } from "./grouping";
 
 export interface StoredDive {
@@ -332,30 +333,52 @@ export function archiveDivesByDatetime(
 
 // ── Import ──
 
+function mergeParsedDivesIntoStore(
+  store: DiveStore,
+  parsedDives: { datetime: string; diveNumber: number; profile: ProfilePoint[] }[],
+): { store: DiveStore; added: number } {
+  if (parsedDives.length === 0) return { store, added: 0 };
+
+  const existingDatetimes = new Set(store.dives.map((d) => d.datetime));
+  const newDives: StoredDive[] = [];
+
+  for (const parsed of parsedDives) {
+    if (existingDatetimes.has(parsed.datetime)) continue;
+    existingDatetimes.add(parsed.datetime);
+    newDives.push({
+      datetime: parsed.datetime,
+      diveNumber: parsed.diveNumber,
+      profile: parsed.profile,
+    });
+  }
+
+  if (newDives.length === 0) return { store, added: 0 };
+
+  const dives = [...store.dives, ...newDives].sort((a, b) =>
+    a.datetime.localeCompare(b.datetime),
+  );
+
+  return {
+    store: { dives, tags: store.tags },
+    added: newDives.length,
+  };
+}
+
 export function mergeUddfIntoStore(
   store: DiveStore,
   xml: string,
 ): { store: DiveStore; added: number } {
   const parsed = parseUddfString(xml);
   if (!parsed) return { store, added: 0 };
+  return mergeParsedDivesIntoStore(store, [parsed]);
+}
 
-  const existingDatetimes = new Set(store.dives.map((d) => d.datetime));
-  if (existingDatetimes.has(parsed.datetime)) return { store, added: 0 };
-
-  const newDive: StoredDive = {
-    datetime: parsed.datetime,
-    diveNumber: parsed.diveNumber,
-    profile: parsed.profile,
-  };
-
-  const dives = [...store.dives, newDive].sort((a, b) =>
-    a.datetime.localeCompare(b.datetime),
-  );
-
-  return {
-    store: { dives, tags: store.tags },
-    added: 1,
-  };
+export async function mergeFitIntoStore(
+  store: DiveStore,
+  buffer: ArrayBuffer,
+): Promise<{ store: DiveStore; added: number }> {
+  const parsedDives = await parseFitArrayBuffer(buffer);
+  return mergeParsedDivesIntoStore(store, parsedDives);
 }
 
 // ── Persistence ──

@@ -11,7 +11,6 @@ import {
   archiveDivesByDatetime,
   diveDataFromStore,
   loadStore,
-  mergeUddfIntoStore,
   saveStore,
   downloadStoreAsJson,
   setDiveDisciplines,
@@ -34,6 +33,7 @@ import Sidebar from "./Sidebar";
 import Chart2D from "./Chart2D";
 import { getDisciplineColor } from "./disciplines";
 import { useMediaQuery } from "./useMediaQuery";
+import { importDiveFiles } from "./importDives";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -186,33 +186,28 @@ export default function App() {
   const handleFileSelected = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? []);
-      if (files.length === 0) return;
+      e.target.value = "";
+      if (files.length === 0 || !store) return;
 
-      const texts = await Promise.all(files.map((f) => f.text()));
-
-      setStore((prev) => {
-        if (!prev) return prev;
-        let current = prev;
-        let totalAdded = 0;
-        for (const text of texts) {
-          const { store: merged, added } = mergeUddfIntoStore(current, text);
-          current = merged;
-          totalAdded += added;
-        }
-        saveStore(current);
-        setTags(tagsFromStored(current.tags, activeDives(current)));
+      try {
+        const { store: merged, added } = await importDiveFiles(store, files);
+        setStore(merged);
+        saveStore(merged);
+        setTags(tagsFromStored(merged.tags, activeDives(merged)));
         setImportMessage(
-          totalAdded > 0
-            ? `Imported ${totalAdded} new dive${totalAdded === 1 ? "" : "s"}`
+          added > 0
+            ? `Imported ${added} new dive${added === 1 ? "" : "s"}`
             : "No new dives found in file(s)",
         );
-        setTimeout(() => setImportMessage(null), 4000);
-        return current;
-      });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unknown import error";
+        setImportMessage(`Import failed: ${message}`);
+      }
 
-      e.target.value = "";
+      setTimeout(() => setImportMessage(null), 4000);
     },
-    [],
+    [store],
   );
 
   const filterOptions = useMemo(
@@ -316,7 +311,7 @@ export default function App() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".uddf"
+            accept=".uddf,.fit"
             multiple
             hidden
             onChange={handleFileSelected}
@@ -427,7 +422,7 @@ export default function App() {
             />
           ) : (
             <div className="chart-empty">
-              No dives to display. Import .uddf files to get started.
+              No dives to display. Import .uddf or .fit files to get started.
             </div>
           )}
         </main>

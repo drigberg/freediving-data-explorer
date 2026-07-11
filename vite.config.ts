@@ -92,4 +92,8 @@ function divesApiPlugin() {
 
 export default defineConfig({
   plugins: [react(), divesApiPlugin()],
+  test: {
+    environment: "jsdom",
+    include: ["src/tests/**/*.test.ts"],
+  },
 });
