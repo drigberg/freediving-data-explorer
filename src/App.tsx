@@ -339,37 +339,41 @@ export default function App() {
             className="import-btn import-dive-logs-btn"
             onClick={handleImportDiveLogsClick}
           >
-            Import dive logs
-            <span
-              className="info-icon"
-              aria-label="Supported dive log file types"
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-                aria-hidden="true"
+            <span className="import-dive-logs-content">
+              Import dive logs
+              <span
+                className="info-icon"
+                aria-label="Supported dive log file types"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
               >
-                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
-              </svg>
-              <span className="info-tooltip" role="tooltip">
-                <span>Supported file types:</span>
-                <ul>
-                  <li>.uddf (Universal Dive Format)</li>
-                  <li>.fit (Garmin)</li>
-                </ul>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
+                </svg>
+                <span className="info-tooltip" role="tooltip">
+                  <span>Supported file types:</span>
+                  <ul>
+                    <li>.uddf (Universal Dive Format)</li>
+                    <li>.fit (Garmin)</li>
+                  </ul>
+                </span>
               </span>
             </span>
           </button>
-          <button className="import-btn" onClick={handleImportDataClick}>
-            Import data
-          </button>
-          <button className="import-btn" onClick={handleExportClick}>
-            Export data
-          </button>
+          <div className="import-export-group">
+            <button className="import-btn" onClick={handleImportDataClick}>
+              Import data
+            </button>
+            <button className="import-btn" onClick={handleExportClick}>
+              Export data
+            </button>
+          </div>
           <input
             ref={diveLogInputRef}
             type="file"

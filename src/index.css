@@ -67,7 +67,17 @@ body,
 .import-dive-logs-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+}
+
+.import-dive-logs-content {
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
+}
+
+.import-export-group {
+    display: contents;
 }
 
 .info-icon {
@@ -1728,7 +1738,18 @@ body,
         order: 999;
     }
 
-    .import-btn {
+    .import-dive-logs-btn {
+        flex: 1 1 100%;
+    }
+
+    .import-export-group {
+        display: flex;
+        flex: 1 1 100%;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .import-export-group .import-btn {
         flex: 1 1 calc(50% - 4px);
         min-width: 0;
         padding: 10px 12px;
@@ -2031,7 +2052,18 @@ body,
         font-size: 1rem;
     }
 
-    .import-btn {
+    .import-dive-logs-btn {
+        flex: 1 1 100%;
+        padding: 10px 12px;
+        font-size: 0.82rem;
+        text-align: center;
+    }
+
+    .import-export-group {
+        flex-direction: column;
+    }
+
+    .import-export-group .import-btn {
         flex: 1 1 100%;
     }
 
