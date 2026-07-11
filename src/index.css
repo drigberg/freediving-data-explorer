@@ -1773,6 +1773,41 @@ body,
     color: #6e7681;
 }
 
+/* ── Dive details stack (max-width: 1120px) ── */
+
+@media (max-width: 1120px) {
+    .app-body--dive-list-expanded {
+        flex-direction: column;
+    }
+
+    .app-body--dive-list-expanded .app-main {
+        order: -1;
+        flex: none;
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        overflow-y: visible;
+    }
+
+    .app-body--dive-list-expanded .sidebar {
+        order: 0;
+        flex: none;
+        width: 100%;
+        max-width: none;
+    }
+
+    .app-body--dive-list-expanded .chart-container--single {
+        width: 100%;
+        margin: 0;
+        padding: 12px;
+        box-sizing: border-box;
+    }
+
+    .app-body--dive-list-expanded .chart-container--single .chart-plot--single {
+        aspect-ratio: 16 / 9;
+    }
+}
+
 /* ── Mobile (max-width: 768px) — desktop styles above are unchanged ── */
 
 @media (max-width: 768px) {
@@ -1928,25 +1963,6 @@ body,
         min-height: 280px;
     }
 
-    .app-body--dive-list-expanded {
-        flex-direction: column;
-    }
-
-    .app-body--dive-list-expanded .app-main {
-        order: -1;
-        flex: 1;
-        width: 100%;
-        height: auto;
-        min-height: auto;
-    }
-
-    .app-body--dive-list-expanded .sidebar {
-        order: 0;
-        flex: none;
-        width: 100%;
-        max-width: none;
-    }
-
     .sidebar {
         width: 100%;
         flex-shrink: 1;
@@ -1966,18 +1982,6 @@ body,
     /* Hide grouping/filtering button on mobile in expanded list mode */
     .app-body--dive-list-expanded .grouping-filter-toggle-btn {
         display: none !important;
-    }
-
-    /* Show graphs full width on mobile in expanded list mode */
-    .app-body--dive-list-expanded .chart-container--single {
-        width: 100%;
-        margin: 0;
-        padding: 12px;
-        box-sizing: border-box;
-    }
-
-    .app-body--dive-list-expanded .chart-container--single .chart-plot--single {
-        aspect-ratio: 16 / 9;
     }
 
     .sidebar-header {
