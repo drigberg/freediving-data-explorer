@@ -446,7 +446,7 @@ export default function App() {
             className="import-btn import-dive-logs-btn"
             onClick={handleImportDiveLogsClick}
           >
-            <span className="import-dive-logs-content">
+            <span className="import-button-with-icon-content">
               Import dive logs
               <span
                 className="info-icon"
@@ -478,7 +478,28 @@ export default function App() {
               Import data
             </button>
             <button className="import-btn" onClick={handleExportClick}>
+              <span className="import-button-with-icon-content">
               Export data
+              <span
+                className="info-icon"
+                aria-label="Export data"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
+                </svg>
+                <span className="info-tooltip" role="tooltip">
+                  <span>Export data to a JSON file to back it up, in case you need to clear your browser's local storage!</span>
+                </span>
+              </span>
+              </span>
             </button>
           </div>
           <input

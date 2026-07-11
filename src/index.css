@@ -70,7 +70,7 @@ body,
     justify-content: center;
 }
 
-.import-dive-logs-content {
+.import-button-with-icon-content {
     display: inline-flex;
     align-items: center;
     gap: 6px;
