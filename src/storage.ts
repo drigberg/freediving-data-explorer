@@ -28,7 +28,6 @@ export interface DiveStore {
   tags: StoredTag[];
 }
 
-const API_URL = "/api/dives";
 const LOCAL_STORAGE_KEY = "freediving-dives-store";
 
 export function emptyStore(): DiveStore {
@@ -507,71 +506,18 @@ function readFromLocalStorage(): DiveStore | null {
 }
 
 function writeToLocalStorage(store: DiveStore): void {
-  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store, null, 2));
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(store));
 }
 
 export async function loadStore(): Promise<DiveStore> {
-  let store: DiveStore | null = null;
-
-  try {
-    const res = await fetch(API_URL);
-    if (res.ok) {
-      store = (await res.json()) as DiveStore;
-    }
-  } catch {
-    // API unavailable — fall back to localStorage
-  }
-
-  if (!store) {
-    store = readFromLocalStorage() ?? emptyStore();
-  }
-
-  type AnyStore = {
-    dives: (StoredDive & { date?: string; label?: string })[];
-    tags: (StoredTag & { diveDates?: string[] })[];
-  };
-  const s = store as AnyStore;
-  const needsLegacyMigration =
-    s.dives.some((d) => "date" in d || "label" in d || "safety" in d) ||
-    s.tags.some(
-      (t) =>
-        "diveDates" in t ||
-        ["Discipline:", "Weight:", "Safety:", "Exposure Suit:"].some((p) =>
-          t.name.startsWith(p),
-        ),
-    );
-
-  const { store: migrated, profilesTrimmed } = prepareStore(store);
-
+  const store = readFromLocalStorage() ?? emptyStore();
+  const { store: migrated } = prepareStore(store);
   writeToLocalStorage(migrated);
-
-  if (needsLegacyMigration || profilesTrimmed) {
-    try {
-      await fetch(API_URL, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(migrated, null, 2),
-      });
-    } catch {
-      // localStorage only
-    }
-  }
-
   return migrated;
 }
 
 export async function saveStore(store: DiveStore): Promise<void> {
   writeToLocalStorage(store);
-
-  try {
-    await fetch(API_URL, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(store, null, 2),
-    });
-  } catch {
-    // Persisted to localStorage only
-  }
 }
 
 export function downloadStoreAsJson(
