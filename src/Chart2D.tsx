@@ -34,6 +34,38 @@ type SeriesEventParams = {
 
 const ACTIVE_LINE_COLOR = "#ffffff";
 
+function formatTooltipNumber(value: unknown): string {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return String(value ?? "");
+  }
+  return value.toFixed(1);
+}
+
+function formatDepthTooltip(value: unknown): string {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return String(value ?? "");
+  }
+  return `${Math.abs(value).toFixed(1)} m`;
+}
+
+function formatVelocityTooltip(value: unknown): string {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return String(value ?? "");
+  }
+  return `${value.toFixed(1)} m/s`;
+}
+
+function formatDurationTooltip(value: unknown): string {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return String(value ?? "");
+  }
+  return `${value.toFixed(1)} s`;
+}
+
+function formatDistanceTooltip(value: unknown): string {
+  return `${formatTooltipNumber(value)} m`;
+}
+
 function buildSingleDiveChartOption(
   depthData: [number, number][],
   metric: "depth" | "velocity",
@@ -54,12 +86,8 @@ function buildSingleDiveChartOption(
       borderColor: "rgba(255, 255, 255, 0.12)",
       borderWidth: 1,
       textStyle: { color: "#e6edf3", fontSize: compact ? 11 : 12 },
-      valueFormatter: (value) => {
-        if (typeof value !== "number") return String(value ?? "");
-        return isVelocity
-          ? `${value.toFixed(2)} m/s`
-          : `${Math.abs(value).toFixed(1)} m`;
-      },
+      valueFormatter: (value) =>
+        isVelocity ? formatVelocityTooltip(value) : formatDepthTooltip(value),
     },
     grid: {
       left: compact ? (isVelocity ? 52 : 44) : isVelocity ? 68 : 60,
@@ -304,12 +332,10 @@ export default function Chart2D({
           borderColor: ACTIVE_LINE_COLOR,
           borderWidth: 1,
           textStyle: { color: "#e6edf3", fontSize: 12 },
-          valueFormatter: (value) => {
-            if (typeof value !== "number") return String(value ?? "");
-            return timelineMetric === "duration"
-              ? `${Math.floor(value / 60)}m${String(Math.round(value % 60)).padStart(2, "0")}s`
-              : `${value.toFixed(1)} m`;
-          },
+          valueFormatter: (value) =>
+            timelineMetric === "duration"
+              ? formatDurationTooltip(value)
+              : formatDepthTooltip(value),
         },
         legend: showLegend
           ? {
@@ -413,6 +439,10 @@ export default function Chart2D({
           borderWidth: 1,
           textStyle: { color: "#e6edf3", fontSize: 12 },
           axisPointer: { type: "shadow" },
+          valueFormatter: (value) =>
+            aggregationMetric === "duration"
+              ? formatDurationTooltip(value)
+              : formatDistanceTooltip(value),
         },
         grid: {
           left: isMobile ? 44 : 60,
@@ -481,6 +511,7 @@ export default function Chart2D({
         borderColor: ACTIVE_LINE_COLOR,
         borderWidth: 1,
         textStyle: { color: "#e6edf3", fontSize: 12 },
+        valueFormatter: (value) => formatDepthTooltip(value),
       },
       legend:
         groupingConfig?.groupMode === "none"
