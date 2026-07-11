@@ -155,7 +155,8 @@ body,
   justify-content: center;
 }
 
-.view-mode-toggle .segment-buttons button {
+.view-mode-toggle .segment-buttons button,
+.chart-view-toggle button {
   padding: 7px 16px;
   font-size: 0.82rem;
 }
@@ -1769,7 +1770,7 @@ body,
 .chart-view-toolbar {
     position: absolute;
     top: 12px;
-    right: 12px;
+    left: 12px;
     z-index: 2;
 }
 
@@ -1781,13 +1782,12 @@ body,
     backdrop-filter: blur(8px);
 }
 
-.chart-view-toggle button {
-    padding: 4px 10px;
-    font-size: 0.72rem;
-}
-
 .chart-container.chart-container--single {
     height: auto;
+}
+
+.chart-container--timeline .chart-plot {
+    margin-top: 44px;
 }
 
 .chart-plot {
@@ -2145,13 +2145,17 @@ body,
 
     .chart-view-toolbar {
         position: static;
-        align-self: flex-end;
+        align-self: flex-start;
         margin-bottom: 2px;
     }
 
     .chart-view-toggle button {
-        padding: 6px 10px;
-        font-size: 0.72rem;
+        padding: 8px 10px;
+        font-size: 0.75rem;
+    }
+
+    .chart-container--timeline .chart-plot {
+        margin-top: 0;
     }
 
     .slider-container {

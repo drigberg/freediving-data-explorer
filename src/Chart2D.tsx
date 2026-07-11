@@ -1195,7 +1195,9 @@ export default function Chart2D({
   );
 
   return (
-    <div className="chart-container">
+    <div
+      className={`chart-container${isTimeline ? " chart-container--timeline" : ""}`}
+    >
       {groupingConfig && onGroupingConfigChange && (
         <div className="chart-view-toolbar">
           <div className="segment-buttons chart-view-toggle">
