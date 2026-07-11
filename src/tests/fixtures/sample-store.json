@@ -1,0 +1,17 @@
+{
+  "dives": [
+    {
+      "datetime": "2026-01-15T10:30:00Z",
+      "diveNumber": 1,
+      "profile": [[0, 0], [10, -5], [20, 0]],
+      "discipline": "Free Immersion",
+      "weightKg": 2
+    }
+  ],
+  "tags": [
+    {
+      "name": "Pool session",
+      "diveDatetimes": ["2026-01-15T10:30:00Z"]
+    }
+  ]
+}

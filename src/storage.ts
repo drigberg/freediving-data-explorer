@@ -381,6 +381,59 @@ export async function mergeFitIntoStore(
   return mergeParsedDivesIntoStore(store, parsedDives);
 }
 
+// ── Import data.json ──
+
+function isValidDiveEntry(d: unknown): boolean {
+  if (!d || typeof d !== "object") return false;
+  const dive = d as Record<string, unknown>;
+  if (!Array.isArray(dive.profile)) return false;
+  if (
+    typeof dive.datetime === "string" &&
+    typeof dive.diveNumber === "number"
+  ) {
+    return true;
+  }
+  return typeof dive.date === "string";
+}
+
+function isValidTagEntry(t: unknown): boolean {
+  if (!t || typeof t !== "object") return false;
+  return typeof (t as Record<string, unknown>).name === "string";
+}
+
+function isDiveStore(value: unknown): value is DiveStore {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (!Array.isArray(v.dives) || !Array.isArray(v.tags)) return false;
+  return (
+    v.dives.every(isValidDiveEntry) && v.tags.every(isValidTagEntry)
+  );
+}
+
+/** Runs migrations and profile normalization on a store. */
+export function prepareStore(store: DiveStore): {
+  store: DiveStore;
+  profilesTrimmed: boolean;
+} {
+  const { store: trimmed, changed: profilesTrimmed } = normalizeDiveProfiles(
+    migrateSafetyProperty(migrateLegacyTags(migrateToNewDiveFormat(store))),
+  );
+  return { store: trimmed, profilesTrimmed };
+}
+
+export function parseStoreFromJson(json: string): DiveStore {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error("Invalid JSON");
+  }
+  if (!isDiveStore(parsed)) {
+    throw new Error("Invalid data.json format");
+  }
+  return prepareStore(parsed).store;
+}
+
 // ── Persistence ──
 
 function readFromLocalStorage(): DiveStore | null {
@@ -428,10 +481,7 @@ export async function loadStore(): Promise<DiveStore> {
         ),
     );
 
-  const { store: trimmed, changed: profilesTrimmed } = normalizeDiveProfiles(
-    migrateSafetyProperty(migrateLegacyTags(migrateToNewDiveFormat(store))),
-  );
-  const migrated = trimmed;
+  const { store: migrated, profilesTrimmed } = prepareStore(store);
 
   writeToLocalStorage(migrated);
 

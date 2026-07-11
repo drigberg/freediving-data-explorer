@@ -34,6 +34,7 @@ import Chart2D from "./Chart2D";
 import { getDisciplineColor } from "./disciplines";
 import { useMediaQuery } from "./useMediaQuery";
 import { importDiveFiles } from "./importDives";
+import { importDataFile } from "./importData";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -52,7 +53,8 @@ export default function App() {
   const [showArchivedDives, setShowArchivedDives] = useState(false);
   const [showGroupingAndFiltering, setShowGroupingAndFiltering] =
     useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const diveLogInputRef = useRef<HTMLInputElement>(null);
+  const dataInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   useEffect(() => {
@@ -174,8 +176,12 @@ export default function App() {
     [activeSidebarDive, sidebarData, store],
   );
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
+  const handleImportDiveLogsClick = () => {
+    diveLogInputRef.current?.click();
+  };
+
+  const handleImportDataClick = () => {
+    dataInputRef.current?.click();
   };
 
   const handleExportClick = useCallback(() => {
@@ -183,7 +189,7 @@ export default function App() {
     downloadStoreAsJson(store);
   }, [store]);
 
-  const handleFileSelected = useCallback(
+  const handleDiveLogFileSelected = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files ?? []);
       e.target.value = "";
@@ -208,6 +214,33 @@ export default function App() {
       setTimeout(() => setImportMessage(null), 4000);
     },
     [store],
+  );
+
+  const handleDataFileSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+
+      try {
+        const imported = await importDataFile(file);
+        setStore(imported);
+        saveStore(imported);
+        setTags(tagsFromStored(imported.tags, activeDives(imported)));
+        setHiddenDives(new Set());
+        setActiveSidebarDive(null);
+        setImportMessage(
+          `Imported ${imported.dives.length} dive${imported.dives.length === 1 ? "" : "s"}`,
+        );
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unknown import error";
+        setImportMessage(`Import failed: ${message}`);
+      }
+
+      setTimeout(() => setImportMessage(null), 4000);
+    },
+    [],
   );
 
   const filterOptions = useMemo(
@@ -302,19 +335,55 @@ export default function App() {
           {importMessage && (
             <span className="import-message">{importMessage}</span>
           )}
-          <button className="import-btn" onClick={handleImportClick}>
-            Import dives
+          <button
+            className="import-btn import-dive-logs-btn"
+            onClick={handleImportDiveLogsClick}
+          >
+            Import dive logs
+            <span
+              className="info-icon"
+              aria-label="Supported dive log file types"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
+              </svg>
+              <span className="info-tooltip" role="tooltip">
+                <span>Supported file types:</span>
+                <ul>
+                  <li>.uddf (Universal Dive Format)</li>
+                  <li>.fit (Garmin)</li>
+                </ul>
+              </span>
+            </span>
+          </button>
+          <button className="import-btn" onClick={handleImportDataClick}>
+            Import data
           </button>
           <button className="import-btn" onClick={handleExportClick}>
             Export data
           </button>
           <input
-            ref={fileInputRef}
+            ref={diveLogInputRef}
             type="file"
             accept=".uddf,.fit"
             multiple
             hidden
-            onChange={handleFileSelected}
+            onChange={handleDiveLogFileSelected}
+          />
+          <input
+            ref={dataInputRef}
+            type="file"
+            accept=".json,application/json"
+            hidden
+            onChange={handleDataFileSelected}
           />
         </div>
       </header>
