@@ -38,6 +38,15 @@ body,
 
 .header-actions {
     display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.header-actions-primary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: center;
     gap: 12px;
 }
@@ -78,6 +87,23 @@ body,
 
 .import-export-group {
     display: contents;
+}
+
+.load-demo-btn-row {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.load-demo-btn {
+    border-color: rgba(46, 160, 67, 0.45);
+    background: rgba(46, 160, 67, 0.16);
+    color: #3fb950;
+}
+
+.load-demo-btn:hover {
+    color: #56d364;
+    background: rgba(46, 160, 67, 0.26);
+    border-color: rgba(46, 160, 67, 0.6);
 }
 
 .info-icon {
@@ -1900,13 +1926,19 @@ body,
 
     .header-actions {
         position: relative;
-        display: flex;
-        flex-wrap: wrap;
+        align-items: stretch;
         gap: 8px;
         padding: 12px;
         background: transparent;
         border-top: none;
         order: 999;
+    }
+
+    .header-actions-primary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
     }
 
     .import-dive-logs-btn {
@@ -1926,6 +1958,11 @@ body,
         padding: 10px 12px;
         font-size: 0.82rem;
         text-align: center;
+    }
+
+    .load-demo-btn {
+        padding: 10px 12px;
+        font-size: 0.82rem;
     }
 
     .import-message {

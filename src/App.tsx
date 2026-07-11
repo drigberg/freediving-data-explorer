@@ -21,6 +21,7 @@ import {
   tagsFromStored,
   tagsToStored,
   replaceDiveWithSplits,
+  parseStoreFromJson,
   type DiveStore,
   type StoredDive,
 } from "./storage";
@@ -42,6 +43,8 @@ import { importDataFile } from "./importData";
 import ManualDiveDialog from "./ManualDiveDialog";
 import { createManualDive, type ManualDiveInput } from "./manualDive";
 import { buildSplitDives } from "./splitDive";
+
+const DEMO_DATA_URL = "/assets/freediving-log-analyzer-assets/demo-data.json";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -271,6 +274,30 @@ export default function App() {
     [],
   );
 
+  const handleLoadDemoData = useCallback(async () => {
+    try {
+      const res = await fetch(DEMO_DATA_URL);
+      if (!res.ok) {
+        throw new Error(`Failed to load demo data (${res.status})`);
+      }
+      const imported = parseStoreFromJson(await res.text());
+      setStore(imported);
+      saveStore(imported);
+      setTags(tagsFromStored(imported.tags, activeDives(imported)));
+      setHiddenDives(new Set());
+      setActiveSidebarDive(null);
+      setImportMessage(
+        `Loaded ${imported.dives.length} demo dive${imported.dives.length === 1 ? "" : "s"}`,
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unknown import error";
+      setImportMessage(`Import failed: ${message}`);
+    }
+
+    setTimeout(() => setImportMessage(null), 4000);
+  }, []);
+
   const handleManualDiveSubmit = useCallback(
     (input: ManualDiveInput) => {
       if (!store) return;
@@ -433,75 +460,87 @@ export default function App() {
       <header className="app-header">
         <h1>Freediving Log Analyzer</h1>
         <div className="header-actions">
-          {importMessage && (
-            <span className="import-message">{importMessage}</span>
-          )}
-          <button
-            className="import-btn"
-            onClick={() => setShowManualDiveDialog(true)}
-          >
-            Manual Entry
-          </button>
-          <button
-            className="import-btn import-dive-logs-btn"
-            onClick={handleImportDiveLogsClick}
-          >
-            <span className="import-button-with-icon-content">
-              Import dive logs
-              <span
-                className="info-icon"
-                aria-label="Supported dive log file types"
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
-                </svg>
-                <span className="info-tooltip" role="tooltip">
-                  <span>Supported file types:</span>
-                  <ul>
-                    <li>.uddf (Shearwater, Mares, Cressi)</li>
-                    <li>.fit (Garmin, Suunto)</li>
-                  </ul>
-                </span>
-              </span>
-            </span>
-          </button>
-          <div className="import-export-group">
-            <button className="import-btn" onClick={handleImportDataClick}>
-              Import data
+          <div className="header-actions-primary">
+            {importMessage && (
+              <span className="import-message">{importMessage}</span>
+            )}
+            <button
+              className="import-btn"
+              onClick={() => setShowManualDiveDialog(true)}
+            >
+              Manual Entry
             </button>
-            <button className="import-btn" onClick={handleExportClick}>
+            <button
+              className="import-btn import-dive-logs-btn"
+              onClick={handleImportDiveLogsClick}
+            >
               <span className="import-button-with-icon-content">
-              Export data
-              <span
-                className="info-icon"
-                aria-label="Export data"
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  aria-hidden="true"
+                Import dive logs
+                <span
+                  className="info-icon"
+                  aria-label="Supported dive log file types"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
-                </svg>
-                <span className="info-tooltip" role="tooltip">
-                  <span>Export data to a JSON file to back it up, in case you need to clear your browser's local storage!</span>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
+                  </svg>
+                  <span className="info-tooltip" role="tooltip">
+                    <span>Supported file types:</span>
+                    <ul>
+                      <li>.uddf (Shearwater, Mares, Cressi)</li>
+                      <li>.fit (Garmin, Suunto)</li>
+                    </ul>
+                  </span>
                 </span>
               </span>
-              </span>
             </button>
+            <div className="import-export-group">
+              <button className="import-btn" onClick={handleImportDataClick}>
+                Import data
+              </button>
+              <button className="import-btn" onClick={handleExportClick}>
+                <span className="import-button-with-icon-content">
+                Export data
+                <span
+                  className="info-icon"
+                  aria-label="Export data"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
+                  </svg>
+                  <span className="info-tooltip" role="tooltip">
+                    <span>Export data to a JSON file to back it up, in case you need to clear your browser's local storage!</span>
+                  </span>
+                </span>
+                </span>
+              </button>
+            </div>
           </div>
+          {store.dives.length === 0 && (
+            <div className="load-demo-btn-row">
+              <button
+                className="import-btn load-demo-btn"
+                onClick={handleLoadDemoData}
+              >
+                Load Demo Data
+              </button>
+            </div>
+          )}
           <input
             ref={diveLogInputRef}
             type="file"
