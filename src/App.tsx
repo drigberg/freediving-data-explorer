@@ -9,6 +9,7 @@ import {
 import {
   activeDives,
   archiveDivesByDatetime,
+  restoreDivesByDatetime,
   addManualDiveToStore,
   diveDataFromStore,
   loadStore,
@@ -159,6 +160,26 @@ export default function App() {
       setHiddenDives(new Set());
     },
     [data, diveListExpanded, listData],
+  );
+
+  const handleRestoreDive = useCallback(
+    (index: number) => {
+      if (!store || !listData) return;
+      const datetime = listData.datetimes[index];
+      if (!datetime) return;
+
+      const updated = restoreDivesByDatetime(store, [datetime]);
+      setStore(updated);
+      saveStore(updated);
+      setTags(tagsFromStored(updated.tags, activeDives(updated)));
+      setShowArchivedDives(false);
+
+      const nextData = diveDataFromStore(updated, { includeArchived: false });
+      const nextIndex = nextData.datetimes.indexOf(datetime);
+      setActiveSidebarDive(nextIndex >= 0 ? nextIndex : null);
+      setHiddenDives(new Set());
+    },
+    [listData, store],
   );
 
   const handleShowArchivedDivesChange = useCallback(
@@ -501,6 +522,7 @@ export default function App() {
           onWeightAssign={handleWeightAssign}
           onExposureSuitAssign={handleExposureSuitAssign}
           onArchiveDive={handleArchiveDive}
+          onRestoreDive={handleRestoreDive}
           diveFilters={diveFilters}
           diveListExpanded={diveListExpanded}
           onSwitchToDiveDetails={handleSwitchToDiveDetails}

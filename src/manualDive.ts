@@ -128,7 +128,8 @@ function latestDiveDatetimeOnDate(
 ): string | null {
   const sameDay = divesOnDate(store, date);
   if (sameDay.length === 0) return null;
-  return [...sameDay.map((d) => d.datetime)].sort().at(-1)!;
+  const datetimes = [...sameDay.map((d) => d.datetime)].sort();
+  return datetimes[datetimes.length - 1] ?? null;
 }
 
 function addOneMinuteToIsoDatetime(isoDatetime: string): string {

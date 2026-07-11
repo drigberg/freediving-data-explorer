@@ -331,6 +331,20 @@ export function archiveDivesByDatetime(
   };
 }
 
+export function restoreDivesByDatetime(
+  store: DiveStore,
+  datetimes: Iterable<string>,
+): DiveStore {
+  const datetimesToUpdate = new Set(datetimes);
+  if (datetimesToUpdate.size === 0) return store;
+  return {
+    ...store,
+    dives: store.dives.map((d) =>
+      datetimesToUpdate.has(d.datetime) ? { ...d, archived: false } : d,
+    ),
+  };
+}
+
 // ── Import ──
 
 function mergeParsedDivesIntoStore(

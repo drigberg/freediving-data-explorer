@@ -45,6 +45,7 @@ interface SidebarProps {
   onWeightAssign: (indices: number[], weightKg: number) => void;
   onExposureSuitAssign: (indices: number[], suit: ExposureSuit) => void;
   onArchiveDive: (index: number) => void;
+  onRestoreDive: (index: number) => void;
   diveFilters: DiveFilterConfig;
   groupingConfig: GroupingConfig;
   diveListExpanded: boolean;
@@ -192,6 +193,7 @@ export default function Sidebar({
   onWeightAssign,
   onExposureSuitAssign,
   onArchiveDive,
+  onRestoreDive,
   diveFilters,
   groupingConfig,
   diveListExpanded,
@@ -777,8 +779,20 @@ export default function Sidebar({
                 onClick={() => onShowArchivedDivesChange(!showArchivedDives)}
                 disabled={inSelectMode}
               >
-                Show Archived
+                {showArchivedDives ? "Hide Archived" : "Show Archived"}
               </button>
+              {showArchivedDives && (
+                <button
+                  type="button"
+                  className="restore-dive-btn"
+                  onClick={() =>
+                    activeDiveIndex != null && onRestoreDive(activeDiveIndex)
+                  }
+                  disabled={inSelectMode || activeDiveIndex == null}
+                >
+                  Restore Selected Dive
+                </button>
+              )}
             </div>
           )}
         </div>
