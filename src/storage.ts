@@ -395,6 +395,34 @@ export async function mergeFitIntoStore(
   return mergeParsedDivesIntoStore(store, parsedDives);
 }
 
+export function replaceDiveWithSplits(
+  store: DiveStore,
+  originalDatetime: string,
+  newDives: StoredDive[],
+): { store: DiveStore; newDatetimes: string[] } {
+  const dives = store.dives.filter((dive) => dive.datetime !== originalDatetime);
+  const merged = [...dives, ...newDives].sort((a, b) =>
+    a.datetime.localeCompare(b.datetime),
+  );
+  const newDatetimes = newDives.map((dive) => dive.datetime).sort();
+
+  const tags = store.tags.map((tag) => {
+    if (!tag.diveDatetimes.includes(originalDatetime)) return tag;
+    const withoutOriginal = tag.diveDatetimes.filter(
+      (datetime) => datetime !== originalDatetime,
+    );
+    return {
+      ...tag,
+      diveDatetimes: [...withoutOriginal, ...newDatetimes].sort(),
+    };
+  });
+
+  return {
+    store: { dives: merged, tags },
+    newDatetimes,
+  };
+}
+
 export function addManualDiveToStore(
   store: DiveStore,
   dive: StoredDive,

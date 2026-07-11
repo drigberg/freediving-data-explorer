@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import ReactECharts from "echarts-for-react";
-import type { EChartsOption } from "echarts";
+import type { ECharts, EChartsOption, LineSeriesOption } from "echarts";
 import {
   chartSeriesIndexForGlobalDive,
   GroupingConfig,
@@ -14,6 +14,23 @@ import {
   getSeriesOpacity,
 } from "./colors";
 import { computeVelocitySeries } from "./diveStats";
+import type { ProfilePoint } from "./parseData";
+import {
+  bumpEndGap,
+  bumpStartGap,
+  canBumpEndRight,
+  canBumpStartRight,
+  detectDiveRegions,
+  detectConsecutiveSurfaceSections,
+  buildEditDepthSeriesData,
+  extractRegionProfiles,
+  regionToggleControl,
+  getTrimSplitIssues,
+  prepareEditableProfile,
+  toggleRegionEnabled,
+  type DiveRegion,
+} from "./splitDive";
+import type { StoredDive } from "./storage";
 import { useMediaQuery } from "./useMediaQuery";
 
 interface Chart2DProps {
@@ -24,13 +41,38 @@ interface Chart2DProps {
   groupingConfig?: GroupingConfig;
   onGroupingConfigChange?: (config: GroupingConfig) => void;
   variant?: "default" | "single";
+  splitEditDive?: StoredDive | null;
+  onSplitDiveComplete?: (regionProfiles: ProfilePoint[][]) => void;
 }
 
 type SeriesEventParams = {
   componentType?: string;
+  componentSubType?: string;
   seriesIndex?: number;
   dataIndex?: number;
+  name?: string;
 };
+
+type SplitEditState = {
+  workingProfile: ProfilePoint[];
+  regions: DiveRegion[];
+  leadingPadding: boolean;
+  trailingPadding: boolean;
+  leadingPaddingIndex: number;
+  trailingPaddingIndex: number;
+};
+
+function createInitialSplitEditState(profile: ProfilePoint[]): SplitEditState {
+  const prepared = prepareEditableProfile(profile);
+  return {
+    workingProfile: prepared.profile,
+    regions: detectDiveRegions(prepared.profile),
+    leadingPadding: prepared.leadingPadding,
+    trailingPadding: prepared.trailingPadding,
+    leadingPaddingIndex: prepared.leadingPaddingIndex,
+    trailingPaddingIndex: prepared.trailingPaddingIndex,
+  };
+}
 
 const ACTIVE_LINE_COLOR = "#ffffff";
 
@@ -161,6 +203,137 @@ function buildSingleDiveChartOption(
   };
 }
 
+const SURFACE_SECTION_GRAY = "rgba(139, 148, 158, 0.25)";
+const EDIT_GRAY_DEPTH_LINE = "rgba(139, 148, 158, 0.55)";
+
+type RegionToggleButton = {
+  id: string;
+  left: number;
+  label: "keep" | "discard";
+  clickable: boolean;
+};
+
+function buildGrayEditDepthLineSeries(
+  data: ([number, number] | null)[],
+  isMobile: boolean,
+): LineSeriesOption[] {
+  if (data.length === 0) return [];
+
+  return [
+    {
+      type: "line",
+      data,
+      smooth: true,
+      showSymbol: false,
+      connectNulls: false,
+      lineStyle: {
+        width: isMobile ? 1.5 : 2.5,
+        color: EDIT_GRAY_DEPTH_LINE,
+      },
+      itemStyle: { color: EDIT_GRAY_DEPTH_LINE },
+      z: 3,
+    },
+  ];
+}
+
+function buildSingleDiveDepthEditOption(
+  profile: ProfilePoint[],
+  regions: DiveRegion[],
+  color: string,
+  shadowColor: string,
+  isMobile = false,
+  showAxisNames = true,
+): EChartsOption {
+  const depthData = profile.map(([time, depth]) => [time, depth] as [number, number]);
+  const option = buildSingleDiveChartOption(
+    depthData,
+    "depth",
+    color,
+    shadowColor,
+    isMobile,
+    false,
+    showAxisNames,
+  );
+  const splitData = buildEditDepthSeriesData(profile, regions);
+  const surfaceSections = detectConsecutiveSurfaceSections(profile);
+  const surfaceMarkAreaData = surfaceSections.map((section) => [
+    {
+      xAxis: profile[section.startIdx][0],
+      itemStyle: { color: SURFACE_SECTION_GRAY },
+      silent: true,
+    },
+    { xAxis: profile[section.endIdx][0] },
+  ]);
+  const regionMarkAreaData = regions.map((region) => {
+    const control = regionToggleControl(region, regions);
+
+    return [
+      {
+        name: region.id,
+        silent: !control.clickable,
+        xAxis: profile[region.startIdx][0],
+        itemStyle: {
+          color: region.enabled
+            ? colorWithAlpha(color, 0.22)
+            : SURFACE_SECTION_GRAY,
+        },
+      },
+      { xAxis: profile[region.endIdx][0] },
+    ];
+  });
+  const markArea: LineSeriesOption["markArea"] = {
+    silent: false,
+    label: { show: false },
+    data: [...surfaceMarkAreaData, ...regionMarkAreaData] as NonNullable<
+      LineSeriesOption["markArea"]
+    >["data"],
+  };
+  const lineWidth = isMobile ? 1.5 : 2.5;
+  const seriesList: LineSeriesOption[] = [
+    ...buildGrayEditDepthLineSeries(splitData.surface, isMobile),
+    ...buildGrayEditDepthLineSeries(splitData.disabled, isMobile),
+  ];
+
+  if (splitData.enabled.length > 0) {
+    seriesList.push({
+      type: "line",
+      data: splitData.enabled,
+      smooth: true,
+      showSymbol: false,
+      connectNulls: false,
+      lineStyle: {
+        width: lineWidth,
+        color,
+        shadowBlur: 12,
+        shadowColor,
+      },
+      itemStyle: { color },
+      areaStyle: {
+        color: {
+          type: "linear",
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: colorWithAlpha(color, 0.2) },
+            { offset: 1, color: colorWithAlpha(color, 0) },
+          ],
+        },
+      },
+      markArea,
+      z: 1,
+    });
+  } else if (seriesList[0]) {
+    seriesList[0] = { ...seriesList[0], markArea };
+  }
+
+  return {
+    ...option,
+    series: seriesList,
+  };
+}
+
 export default function Chart2D({
   processed,
   visibleIndices,
@@ -169,6 +342,8 @@ export default function Chart2D({
   groupingConfig,
   onGroupingConfigChange,
   variant = "default",
+  splitEditDive = null,
+  onSplitDiveComplete,
 }: Chart2DProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const mobileLineWidthActive = isMobile ? 2 : 3;
@@ -186,6 +361,20 @@ export default function Chart2D({
   const viewMode = groupingConfig?.viewMode ?? "diveProfile";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
+  const [splitEditing, setSplitEditing] = useState(false);
+  const [splitEditState, setSplitEditState] = useState<SplitEditState | null>(
+    null,
+  );
+  const depthChartRef = useRef<ReactECharts>(null);
+  const [regionToggleButtons, setRegionToggleButtons] = useState<
+    RegionToggleButton[]
+  >([]);
+
+  useEffect(() => {
+    setSplitEditing(false);
+    setSplitEditState(null);
+    setRegionToggleButtons([]);
+  }, [splitEditDive?.datetime]);
 
   useEffect(() => {
     setActiveIndex(series.length - 1);
@@ -270,6 +459,163 @@ export default function Chart2D({
     [groupingConfig, onGroupingConfigChange],
   );
 
+  const trimSplitIssues = useMemo(
+    () =>
+      splitEditDive != null ? getTrimSplitIssues(splitEditDive.profile) : [],
+    [splitEditDive],
+  );
+
+  const showTrimSplitToolbar =
+    splitEditing || trimSplitIssues.length > 0;
+
+  const handleStartTrimSplit = useCallback(() => {
+    if (!splitEditDive) return;
+    setSplitEditState(createInitialSplitEditState(splitEditDive.profile));
+    setSplitEditing(true);
+  }, [splitEditDive]);
+
+  const handleCancelTrimSplit = useCallback(() => {
+    setSplitEditState(null);
+    setSplitEditing(false);
+  }, []);
+
+  const handleDoneTrimSplit = useCallback(() => {
+    if (!splitEditState || !onSplitDiveComplete) return;
+    onSplitDiveComplete(
+      extractRegionProfiles(
+        splitEditState.workingProfile,
+        splitEditState.regions,
+      ),
+    );
+    setSplitEditState(null);
+    setSplitEditing(false);
+  }, [onSplitDiveComplete, splitEditState]);
+
+  const handleBumpStartLeft = useCallback(() => {
+    setSplitEditState((prev) => {
+      if (!prev?.leadingPadding) return prev;
+      return {
+        ...prev,
+        workingProfile: bumpStartGap(
+          prev.workingProfile,
+          1,
+          prev.leadingPaddingIndex,
+        ),
+      };
+    });
+  }, []);
+
+  const handleBumpStartRight = useCallback(() => {
+    setSplitEditState((prev) => {
+      if (!prev?.leadingPadding) return prev;
+      if (!canBumpStartRight(prev.workingProfile, prev.leadingPaddingIndex)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        workingProfile: bumpStartGap(
+          prev.workingProfile,
+          -1,
+          prev.leadingPaddingIndex,
+        ),
+      };
+    });
+  }, []);
+
+  const handleBumpEndLeft = useCallback(() => {
+    setSplitEditState((prev) => {
+      if (!prev?.trailingPadding) return prev;
+      return {
+        ...prev,
+        workingProfile: bumpEndGap(
+          prev.workingProfile,
+          -1,
+          prev.trailingPaddingIndex,
+        ),
+      };
+    });
+  }, []);
+
+  const handleBumpEndRight = useCallback(() => {
+    setSplitEditState((prev) => {
+      if (!prev?.trailingPadding) return prev;
+      if (!canBumpEndRight(prev.workingProfile, prev.trailingPaddingIndex)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        workingProfile: bumpEndGap(
+          prev.workingProfile,
+          1,
+          prev.trailingPaddingIndex,
+        ),
+      };
+    });
+  }, []);
+
+  const updateRegionToggleButtons = useCallback(() => {
+    if (
+      !splitEditing ||
+      !splitEditState ||
+      splitEditState.regions.length <= 1
+    ) {
+      setRegionToggleButtons([]);
+      return;
+    }
+
+    const chart = depthChartRef.current?.getEchartsInstance();
+    if (!chart) return;
+
+    const profile = splitEditState.workingProfile;
+    const buttons = splitEditState.regions.map((region) => {
+      const centerTime =
+        (profile[region.startIdx][0] + profile[region.endIdx][0]) / 2;
+      const pixel = chart.convertToPixel(
+        { xAxisIndex: 0, yAxisIndex: 0 },
+        [centerTime, 0],
+      );
+      const control = regionToggleControl(region, splitEditState.regions);
+
+      return {
+        id: region.id,
+        left: Array.isArray(pixel) ? pixel[0] : 0,
+        label: control.label,
+        clickable: control.clickable,
+      };
+    });
+
+    setRegionToggleButtons(buttons);
+  }, [splitEditing, splitEditState]);
+
+  useEffect(() => {
+    if (!splitEditing) {
+      setRegionToggleButtons([]);
+      return;
+    }
+
+    updateRegionToggleButtons();
+    const handleResize = () => updateRegionToggleButtons();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [splitEditing, updateRegionToggleButtons]);
+
+  const handleDepthChartReady = useCallback(
+    (chart: ECharts) => {
+      chart.on("finished", updateRegionToggleButtons);
+      updateRegionToggleButtons();
+    },
+    [updateRegionToggleButtons],
+  );
+
+  const handleRegionToggleClick = useCallback((regionId: string) => {
+    setSplitEditState((prev) => {
+      if (!prev) return prev;
+      const toggled = toggleRegionEnabled(prev.regions, regionId);
+      if (!toggled) return prev;
+      return { ...prev, regions: toggled };
+    });
+  }, []);
+
   const singleDiveCharts = useMemo(() => {
     if (!isSingleDive) return null;
 
@@ -277,18 +623,33 @@ export default function Chart2D({
     const shadowColor = series[0]?.color
       ? colorWithAlpha(series[0].color, 0.25)
       : getSeriesColorRgba(0, 1, 0.25);
-    const depthData = series[0]?.data ?? [];
+    const depthData =
+      splitEditing && splitEditState
+        ? splitEditState.workingProfile.map(
+            ([time, depth]) => [time, depth] as [number, number],
+          )
+        : (series[0]?.data ?? []);
 
     return {
-      depth: buildSingleDiveChartOption(
-        depthData,
-        "depth",
-        color,
-        shadowColor,
-        isMobile,
-        false,
-        !isMobile,
-      ),
+      depth:
+        splitEditing && splitEditState
+          ? buildSingleDiveDepthEditOption(
+              splitEditState.workingProfile,
+              splitEditState.regions,
+              color,
+              shadowColor,
+              isMobile,
+              !isMobile,
+            )
+          : buildSingleDiveChartOption(
+              depthData,
+              "depth",
+              color,
+              shadowColor,
+              isMobile,
+              false,
+              !isMobile,
+            ),
       velocity: buildSingleDiveChartOption(
         depthData,
         "velocity",
@@ -299,7 +660,20 @@ export default function Chart2D({
         !isMobile,
       ),
     };
-  }, [isSingleDive, isMobile, series]);
+  }, [isMobile, isSingleDive, series, splitEditState, splitEditing]);
+
+  const startGapCanShrink =
+    splitEditState != null &&
+    canBumpStartRight(
+      splitEditState.workingProfile,
+      splitEditState.leadingPaddingIndex,
+    );
+  const endGapCanShrink =
+    splitEditState != null &&
+    canBumpEndRight(
+      splitEditState.workingProfile,
+      splitEditState.trailingPaddingIndex,
+    );
 
   const option = useMemo<EChartsOption>(() => {
     const total = series.length;
@@ -606,15 +980,121 @@ export default function Chart2D({
     return (
       <div className="chart-single-stack">
         <div className="chart-container chart-container--single">
-          <h3 className="chart-single-header">Depth</h3>
-          <div className="chart-plot chart-plot--single">
-            <ReactECharts
-              option={singleDiveCharts.depth}
-              notMerge={true}
-              style={{ height: "100%", width: "100%" }}
-              opts={{ renderer: "canvas" }}
-              theme="dark"
-            />
+          <div className="chart-single-title-row">
+            <h3 className="chart-single-header">Depth</h3>
+            {showTrimSplitToolbar && (
+              <div className="chart-single-toolbar filter-chips">
+                {splitEditing ? (
+                  <>
+                    <button
+                      type="button"
+                      className="tag-action-btn cancel"
+                      onClick={handleCancelTrimSplit}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="tag-action-btn done"
+                      onClick={handleDoneTrimSplit}
+                    >
+                      Done
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="chart-trim-split-btn"
+                    onClick={handleStartTrimSplit}
+                  >
+                    <span className="chart-trim-split-content">
+                      Trim/Split
+                      <span
+                        className="info-icon"
+                        aria-label="Detected trim/split issues"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
+                        </svg>
+                        <span className="info-tooltip" role="tooltip">
+                          <span>Detected issues:</span>
+                          <ul>
+                            {trimSplitIssues.map((issue) => (
+                              <li key={issue}>{issue}</li>
+                            ))}
+                          </ul>
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {splitEditing && splitEditState?.leadingPadding && (
+            <div className="chart-padding-controls chart-padding-controls--start">
+              <button type="button" onClick={handleBumpStartLeft}>
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={handleBumpStartRight}
+                disabled={!startGapCanShrink}
+              >
+                →
+              </button>
+            </div>
+          )}
+          {splitEditing && splitEditState?.trailingPadding && (
+            <div className="chart-padding-controls chart-padding-controls--end">
+              <button type="button" onClick={handleBumpEndLeft}>
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={handleBumpEndRight}
+                disabled={!endGapCanShrink}
+              >
+                →
+              </button>
+            </div>
+          )}
+          <div className="chart-depth-edit-frame">
+            <div className="chart-plot chart-plot--single chart-plot--depth-edit">
+              {splitEditing && regionToggleButtons.length > 0 && (
+                <div className="chart-region-toggle-row">
+                  {regionToggleButtons.map((button) => (
+                    <button
+                      key={button.id}
+                      type="button"
+                      className="chart-region-toggle-btn"
+                      style={{ left: `${button.left}px` }}
+                      disabled={!button.clickable}
+                      onClick={() => handleRegionToggleClick(button.id)}
+                    >
+                      {button.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <ReactECharts
+                ref={depthChartRef}
+                option={singleDiveCharts.depth}
+                notMerge={true}
+                onChartReady={splitEditing ? handleDepthChartReady : undefined}
+                style={{ height: "100%", width: "100%" }}
+                opts={{ renderer: "canvas" }}
+                theme="dark"
+              />
+            </div>
           </div>
           {isMobile && (
             <div

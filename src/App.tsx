@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DiveData, ExposureSuit } from "./parseData";
+import type { DiveData, ExposureSuit, ProfilePoint } from "./parseData";
 import {
   defaultGroupingConfig,
   processData,
@@ -20,7 +20,9 @@ import {
   setDiveWeights,
   tagsFromStored,
   tagsToStored,
+  replaceDiveWithSplits,
   type DiveStore,
+  type StoredDive,
 } from "./storage";
 import {
   defaultDiveFilters,
@@ -39,6 +41,7 @@ import { importDiveFiles } from "./importDives";
 import { importDataFile } from "./importData";
 import ManualDiveDialog from "./ManualDiveDialog";
 import { createManualDive, type ManualDiveInput } from "./manualDive";
+import { buildSplitDives } from "./splitDive";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -354,6 +357,52 @@ export default function App() {
     };
   }, [activeSidebarDive, diveListExpanded, listData]);
 
+  const activeStoredDive = useMemo((): StoredDive | null => {
+    if (!store || activeSidebarDive == null || !listData) return null;
+    const datetime = listData.datetimes[activeSidebarDive];
+    return store.dives.find((dive) => dive.datetime === datetime) ?? null;
+  }, [activeSidebarDive, listData, store]);
+
+  const handleSplitDiveComplete = useCallback(
+    (regionProfiles: ProfilePoint[][]) => {
+      if (!store || !activeStoredDive) return;
+
+      const newDives = buildSplitDives(
+        activeStoredDive,
+        regionProfiles,
+        store,
+      );
+      const { store: updated, newDatetimes } = replaceDiveWithSplits(
+        store,
+        activeStoredDive.datetime,
+        newDives,
+      );
+
+      setStore(updated);
+      saveStore(updated);
+      setTags(tagsFromStored(updated.tags, activeDives(updated)));
+
+      const refreshedListData = diveDataFromStore(updated, {
+        includeArchived: showArchivedDives,
+      });
+      const firstNewDatetime = newDatetimes[0];
+      if (firstNewDatetime) {
+        const newIndex = refreshedListData.datetimes.indexOf(firstNewDatetime);
+        if (newIndex >= 0) {
+          setActiveSidebarDive(newIndex);
+        }
+      }
+
+      setImportMessage(
+        regionProfiles.length > 1
+          ? `Split into ${regionProfiles.length} dives`
+          : "Dive trimmed",
+      );
+      setTimeout(() => setImportMessage(null), 4000);
+    },
+    [activeStoredDive, showArchivedDives, store],
+  );
+
   const handleViewModeChange = useCallback(
     (mode: "overview" | "diveDetails") => {
       if (mode === "overview") {
@@ -537,6 +586,8 @@ export default function App() {
                 visibleIndices={visibleIndices}
                 activeDiveIndex={activeSidebarDive}
                 variant="single"
+                splitEditDive={activeStoredDive}
+                onSplitDiveComplete={handleSplitDiveComplete}
               />
             ) : (
               <div className="chart-empty">
