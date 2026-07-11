@@ -34,9 +34,10 @@ export function formatDuration(seconds: number): string {
 export function computeVelocitySeries(
   points: ProfilePoint[],
 ): [number, number][] {
-  if (points.length < 2) return [];
+  if (points.length === 0) return [];
+  if (points.length === 1) return [[points[0][0], 0]];
 
-  const result: [number, number][] = [];
+  const result: [number, number][] = [[points[0][0], 0]];
   for (let i = 1; i < points.length; i++) {
     const [t0, d0] = points[i - 1];
     const [t1, d1] = points[i];
@@ -45,5 +46,6 @@ export function computeVelocitySeries(
     result.push([t1, (d1 - d0) / dt]);
   }
 
+  result.push([points[points.length - 1][0], 0]);
   return result;
 }
