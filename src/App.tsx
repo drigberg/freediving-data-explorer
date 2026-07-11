@@ -396,8 +396,8 @@ export default function App() {
                 <span className="info-tooltip" role="tooltip">
                   <span>Supported file types:</span>
                   <ul>
-                    <li>.uddf (Universal Dive Format)</li>
-                    <li>.fit (Garmin)</li>
+                    <li>.uddf (Shearwater, Mares, Cressi)</li>
+                    <li>.fit (Garmin, Suunto)</li>
                   </ul>
                 </span>
               </span>
