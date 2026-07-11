@@ -4,6 +4,10 @@
   - Allow importing existing config file
   - Store data in local storage?
 - Add breakpoints for mobile!
+- Exposure suit options:
+  - None
+  - Shorty
+  - Smoothskin
 - Dive detail mode
   - Show thermocline somehow?
   - "Visualization mode": show a diver on a vertical line, and move it according to dive data, with "play" and "pause" buttons, plus a slider to click and drag through time.

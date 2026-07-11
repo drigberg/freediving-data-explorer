@@ -381,6 +381,24 @@ export async function mergeFitIntoStore(
   return mergeParsedDivesIntoStore(store, parsedDives);
 }
 
+export function addManualDiveToStore(
+  store: DiveStore,
+  dive: StoredDive,
+): { store: DiveStore; added: number } {
+  if (store.dives.some((d) => d.datetime === dive.datetime)) {
+    return { store, added: 0 };
+  }
+
+  const dives = [...store.dives, dive].sort((a, b) =>
+    a.datetime.localeCompare(b.datetime),
+  );
+
+  return {
+    store: { dives, tags: store.tags },
+    added: 1,
+  };
+}
+
 // ── Import data.json ──
 
 function isValidDiveEntry(d: unknown): boolean {

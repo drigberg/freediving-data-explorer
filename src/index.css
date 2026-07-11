@@ -1507,6 +1507,56 @@ body,
     cursor: default;
 }
 
+.manual-dive-dialog {
+    width: 420px;
+}
+
+.manual-dive-form .tag-field-label {
+    min-width: 90px;
+}
+
+.manual-dive-form input[type="date"],
+.manual-dive-form input[type="time"] {
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e6edf3;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.manual-dive-form input[type="date"]:focus,
+.manual-dive-form input[type="time"]:focus {
+    border-color: #58a6ff;
+}
+
+.required-mark {
+    color: #f85149;
+    margin-left: 2px;
+}
+
+.tag-field-label--muted {
+    color: #6e7681;
+}
+
+.manual-dive-form input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.manual-dive-discipline-row {
+    align-items: flex-start;
+}
+
+.manual-dive-discipline-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
 /* ── Main chart area ── */
 
 .app-main {

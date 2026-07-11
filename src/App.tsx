@@ -9,6 +9,7 @@ import {
 import {
   activeDives,
   archiveDivesByDatetime,
+  addManualDiveToStore,
   diveDataFromStore,
   loadStore,
   saveStore,
@@ -35,6 +36,8 @@ import { getDisciplineColor } from "./disciplines";
 import { useMediaQuery } from "./useMediaQuery";
 import { importDiveFiles } from "./importDives";
 import { importDataFile } from "./importData";
+import ManualDiveDialog from "./ManualDiveDialog";
+import { createManualDive, type ManualDiveInput } from "./manualDive";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -53,6 +56,7 @@ export default function App() {
   const [showArchivedDives, setShowArchivedDives] = useState(false);
   const [showGroupingAndFiltering, setShowGroupingAndFiltering] =
     useState(false);
+  const [showManualDiveDialog, setShowManualDiveDialog] = useState(false);
   const diveLogInputRef = useRef<HTMLInputElement>(null);
   const dataInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -243,6 +247,33 @@ export default function App() {
     [],
   );
 
+  const handleManualDiveSubmit = useCallback(
+    (input: ManualDiveInput) => {
+      if (!store) return;
+
+      try {
+        const dive = createManualDive(store, input);
+        const { store: merged, added } = addManualDiveToStore(store, dive);
+        if (added === 0) {
+          setImportMessage("A dive already exists at this date and time");
+        } else {
+          setStore(merged);
+          saveStore(merged);
+          setTags(tagsFromStored(merged.tags, activeDives(merged)));
+          setImportMessage("Added dive");
+          setShowManualDiveDialog(false);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unknown error";
+        setImportMessage(`Failed to add dive: ${message}`);
+      }
+
+      setTimeout(() => setImportMessage(null), 4000);
+    },
+    [store],
+  );
+
   const filterOptions = useMemo(
     () => (data ? filterOptionsFromData(data) : null),
     [data],
@@ -335,6 +366,12 @@ export default function App() {
           {importMessage && (
             <span className="import-message">{importMessage}</span>
           )}
+          <button
+            className="import-btn"
+            onClick={() => setShowManualDiveDialog(true)}
+          >
+            Manual Entry
+          </button>
           <button
             className="import-btn import-dive-logs-btn"
             onClick={handleImportDiveLogsClick}
@@ -500,6 +537,12 @@ export default function App() {
           )}
         </main>
       </div>
+      {showManualDiveDialog && (
+        <ManualDiveDialog
+          onSubmit={handleManualDiveSubmit}
+          onClose={() => setShowManualDiveDialog(false)}
+        />
+      )}
     </div>
   );
 }

@@ -26,7 +26,7 @@ export default function ExposureSuitDialog({
         <h3>Select Exposure Suit</h3>
         <div className="tag-form">
           <div className="tag-form-row">
-            <span className="tag-field-label">Cell type</span>
+            <span className="tag-field-label">Wetsuit type</span>
             <button
               className={`tag-option ${openCell ? "active" : ""}`}
               onClick={() => setOpenCell(true)}
