@@ -209,6 +209,7 @@ export default function Sidebar({
   const [expandedDives, setExpandedDives] = useState<Set<number>>(new Set());
   const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set());
   const diveListRef = useRef<HTMLDivElement>(null);
+  const diveListExpandedRef = useRef(diveListExpanded);
 
   useEffect(() => {
     if (activeDiveIndex == null) return;
@@ -591,7 +592,11 @@ export default function Sidebar({
   }, []);
 
   useEffect(() => {
+    const wasExpanded = diveListExpandedRef.current;
+    diveListExpandedRef.current = diveListExpanded;
+
     if (activeDiveIndex == null || !diveListExpanded) return;
+    if (!wasExpanded) return;
 
     const timeoutId = window.setTimeout(() => {
       requestAnimationFrame(() => {
