@@ -1,4 +1,5 @@
 - Data:
+  - Allow trimming the ends of dives and inserting 0s at the beginning
   - Allow manually inputting dives as max depth + duration + date and time
   - Allow importing existing config file
   - Store data in local storage?
