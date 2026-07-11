@@ -44,7 +44,7 @@ import ManualDiveDialog from "./ManualDiveDialog";
 import { createManualDive, type ManualDiveInput } from "./manualDive";
 import { buildSplitDives } from "./splitDive";
 
-const DEMO_DATA_URL = "/assets/freediving-log-analyzer-assets/demo-data.json";
+const DEMO_DATA_URL = "/public/assets/freediving-log-analyzer-assets/demo-data.json";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
