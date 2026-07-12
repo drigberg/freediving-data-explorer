@@ -219,7 +219,7 @@ export default function ManualDiveDialog({
             onClick={handleSubmit}
             disabled={!canSubmit}
           >
-            Manual Entry
+            Add Dive
           </button>
         </div>
       </div>

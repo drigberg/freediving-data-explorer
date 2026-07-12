@@ -43,6 +43,12 @@ import { importDataFile } from "./importData";
 import ManualDiveDialog from "./ManualDiveDialog";
 import { createManualDive, type ManualDiveInput } from "./manualDive";
 import { buildSplitDives } from "./splitDive";
+import {
+  PencilIcon,
+  RefreshIcon,
+  SaveFileIcon,
+  UploadIcon,
+} from "./ButtonIcons";
 
 const DEMO_DATA_URL = "/public/assets/freediving-log-analyzer-assets/demo-data.json";
 
@@ -468,14 +474,18 @@ export default function App() {
               className="import-btn"
               onClick={() => setShowManualDiveDialog(true)}
             >
-              Manual Entry
+              <span className="import-button-with-icon-content">
+                <PencilIcon />
+                Manual Entry
+              </span>
             </button>
             <button
               className="import-btn import-dive-logs-btn"
               onClick={handleImportDiveLogsClick}
             >
               <span className="import-button-with-icon-content">
-                Import dive logs
+                <UploadIcon />
+                Import Dive Logs
                 <span
                   className="info-icon"
                   aria-label="Supported dive log file types"
@@ -503,11 +513,15 @@ export default function App() {
             </button>
             <div className="import-export-group">
               <button className="import-btn" onClick={handleImportDataClick}>
-                Import data
+                <span className="import-button-with-icon-content">
+                  <RefreshIcon />
+                  Load From Backup File
+                </span>
               </button>
               <button className="import-btn" onClick={handleExportClick}>
                 <span className="import-button-with-icon-content">
-                Export data
+                <SaveFileIcon />
+                Export Backup File
                 <span
                   className="info-icon"
                   aria-label="Export data"

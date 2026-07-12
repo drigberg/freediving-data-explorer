@@ -52,6 +52,9 @@ body,
 }
 
 .import-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 7px 16px;
     font-size: 0.85rem;
     font-weight: 500;
@@ -83,6 +86,11 @@ body,
     display: inline-flex;
     align-items: center;
     gap: 6px;
+}
+
+.import-btn-icon {
+    flex-shrink: 0;
+    opacity: 0.9;
 }
 
 .import-export-group {
@@ -1941,8 +1949,11 @@ body,
         width: 100%;
     }
 
-    .import-dive-logs-btn {
+    .header-actions-primary > .import-btn {
         flex: 1 1 100%;
+        padding: 10px 12px;
+        font-size: 0.82rem;
+        text-align: center;
     }
 
     .import-export-group {
@@ -2217,13 +2228,6 @@ body,
 
     .app-header h1 {
         font-size: 1rem;
-    }
-
-    .import-dive-logs-btn {
-        flex: 1 1 100%;
-        padding: 10px 12px;
-        font-size: 0.82rem;
-        text-align: center;
     }
 
     .import-export-group {
