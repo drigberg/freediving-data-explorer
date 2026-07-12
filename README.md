@@ -8,6 +8,28 @@ See it in action at https://danielrigberg.com/freediving-log-explorer.html
 
 This web app provides a UI for tagging and graphing freediving logs to track progress and investigate areas of improvement.
 
+## FAQ
+
+### Can anyone else see my data?
+Nope! All of your data stays in your browser.
+
+### Is my data saved in between sessions?
+Since your data is only stored in the browser, it may be cleared if you reset your local memory. You can use the “Export Backup File” button to save a copy which can later be loaded with the “Load From Backup File” button.
+
+### I don’t have a dive computer — can I add data manually?
+Yes! Just click the “Manual Entry” button.
+
+### My dive computer exports to a different file type. Will you add support for it?
+Of course! Just send me a sample, and I’ll make it happen.
+
+### Will this ever be added to any freediving community websites?
+Maybe, if people find it useful! For now, it'll just live on my personal website.
+
+### Can I contribute to the codebase?
+Feel free to check out the code at https://github.com/drigberg/freediving-data-explorer and open issues or pull requests. I haven’t made a contribution guide yet, so let me know if you have any questions!
+
+## Screenshots
+
 **Dive profiles: deepest dive by discipline**
 ![Dive profiles: deepest dive by discipline](./public/2026-july-personal-bests-demo.png?raw=true)
 
