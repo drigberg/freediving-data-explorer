@@ -167,6 +167,18 @@ body,
     border-color: rgba(46, 160, 67, 0.6);
 }
 
+.delete-data-btn {
+    border-color: rgba(248, 81, 73, 0.45);
+    background: rgba(248, 81, 73, 0.12);
+    color: #f85149;
+}
+
+.delete-data-btn:hover {
+    color: #ff7b72;
+    background: rgba(248, 81, 73, 0.22);
+    border-color: rgba(248, 81, 73, 0.6);
+}
+
 .info-icon {
     position: relative;
     display: inline-flex;

@@ -520,6 +520,10 @@ export async function saveStore(store: DiveStore): Promise<void> {
   writeToLocalStorage(store);
 }
 
+export function deleteStoredData(): void {
+  localStorage.removeItem(LOCAL_STORAGE_KEY);
+}
+
 export function downloadStoreAsJson(
   store: DiveStore,
   filename = "data.json",

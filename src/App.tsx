@@ -11,7 +11,9 @@ import {
   archiveDivesByDatetime,
   restoreDivesByDatetime,
   addManualDiveToStore,
+  deleteStoredData,
   diveDataFromStore,
+  emptyStore,
   loadStore,
   saveStore,
   downloadStoreAsJson,
@@ -226,6 +228,28 @@ export default function App() {
     if (!store) return;
     downloadStoreAsJson(store);
   }, [store]);
+
+  const handleDeleteSavedData = useCallback(() => {
+    if (
+      !window.confirm(
+        "Delete all saved dive data from this browser? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    deleteStoredData();
+    const deleted = emptyStore();
+    setStore(deleted);
+    setTags([]);
+    setHiddenDives(new Set());
+    setActiveSidebarDive(null);
+    setDiveFilters(defaultDiveFilters);
+    setGroupingConfig(defaultGroupingConfig());
+    setShowArchivedDives(false);
+    setImportMessage("Deleted saved data");
+    setTimeout(() => setImportMessage(null), 4000);
+  }, []);
 
   const handleDiveLogFileSelected = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -549,6 +573,15 @@ export default function App() {
                     <span>Export data to a JSON file to back it up, in case you need to clear your browser's local storage!</span>
                   </span>
                 </span>
+                </span>
+              </button>
+              <button
+                className="import-btn"
+                onClick={handleDeleteSavedData}
+              >
+                <span className="import-button-with-icon-content">
+                  <span aria-hidden="true">🗑️</span>
+                  Delete Saved Data
                 </span>
               </button>
             </div>

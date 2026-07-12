@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const LAST_DISMISSED_DATE_KEY = "lastDismissedDate";
+const LAST_DISMISSED_DATE_KEY = "freediving-log-explorer:lastDismissedDate";
 
 function todayDateString(): string {
   return new Date().toLocaleDateString("en-CA");
