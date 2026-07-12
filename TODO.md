@@ -4,8 +4,10 @@
   - Allow aggregation in timeline view
   - Show some sort of calculated chart titles
 - Data:
-  - Get rid of "keep" and "discard" buttons, OR just set a minimum requirement for regions (Minimum 2m and 5s?)
-    Allow editing and removing tags for individual dives
+  - Trimming:
+    - Get rid of "keep" and "discard" buttons, OR just set a minimum requirement for regions (Minimum 2m and 5s?)
+    - Make "keep" regions more obvious
+  - Allow editing and removing tags for individual dives
 - Exposure suit options:
   - None
   - Shorty

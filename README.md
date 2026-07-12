@@ -38,6 +38,9 @@ Feel free to check out the code at https://github.com/drigberg/freediving-data-e
 ### I want to make my own version of this app. Mind if I fork the repo?
 Go for it, and please share whatever you build! DM me if you have any questions about how to deploy it.
 
+### What updates do you have planned?
+Check out the [TODO file](./TODO.md)!
+
 ## Screenshots
 
 **Dive profiles: deepest dive by discipline**
