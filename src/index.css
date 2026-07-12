@@ -27,6 +27,59 @@ body,
     position: relative;
 }
 
+.motivational-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 44px 10px 16px;
+    border-bottom: 1px solid rgba(46, 160, 67, 0.45);
+    background: rgba(46, 160, 67, 0.16);
+    color: #3fb950;
+}
+
+.motivational-banner-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.motivational-banner-dismiss {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.motivational-banner-dismiss:hover {
+    color: #56d364;
+    background: rgba(46, 160, 67, 0.26);
+}
+
+.motivational-banner-spacer {
+    flex-shrink: 0;
+}
+
 /* ── Header ── */
 
 .app-header {
@@ -1971,9 +2024,15 @@ body,
         text-align: center;
     }
 
+    .load-demo-btn-row {
+        width: 100%;
+    }
+
     .load-demo-btn {
+        width: 100%;
         padding: 10px 12px;
         font-size: 0.82rem;
+        text-align: center;
     }
 
     .import-message {

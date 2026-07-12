@@ -1,3 +1,5 @@
+- Show presets in timeline view
+- Allow aggregation in timeline view
 - Data:
   - Allow trimming the ends of dives and inserting 0s at the beginning
   - Allow manually inputting dives as max depth + duration + date and time

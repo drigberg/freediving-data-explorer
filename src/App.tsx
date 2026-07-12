@@ -49,6 +49,7 @@ import {
   SaveFileIcon,
   UploadIcon,
 } from "./ButtonIcons";
+import SloganBanner from "./SloganBanner.tsx";
 
 const DEMO_DATA_URL = "/public/assets/freediving-log-explorer-assets/demo-data.json";
 
@@ -458,11 +459,18 @@ export default function App() {
   }, [handleViewModeChange]);
 
   if (!store || !data || !listData || !sidebarData || !groupingConfig) {
-    return <div className="app-loading">Loading dives…</div>;
+    return (
+      <>
+        <SloganBanner />
+        <div className="app-loading">Loading dives…</div>
+      </>
+    );
   }
 
   return (
-    <div className="app">
+    <>
+      <SloganBanner />
+      <div className="app">
       <header className="app-header">
         <h1>Freediving Log Explorer</h1>
         <div className="header-actions">
@@ -690,6 +698,7 @@ export default function App() {
           onClose={() => setShowManualDiveDialog(false)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
