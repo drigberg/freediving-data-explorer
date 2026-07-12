@@ -10,6 +10,10 @@ This web app provides a UI for tagging and graphing freediving logs to track pro
 
 ## Frequently Asked Questions
 
+### There are a lot of options in this app. How do I get started?
+Check out the demo video, [here](https://drive.google.com/file/d/1xReaDxPt9S3srIHwfu7V3WxsMyBoOnCM/view?usp=sharing
+)!
+
 ### Can anyone else see my data?
 Nope! All of your data stays in your browser.
 
