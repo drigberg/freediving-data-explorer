@@ -50,7 +50,7 @@ import {
   UploadIcon,
 } from "./ButtonIcons";
 
-const DEMO_DATA_URL = "/public/assets/freediving-log-analyzer-assets/demo-data.json";
+const DEMO_DATA_URL = "/public/assets/freediving-log-explorer-assets/demo-data.json";
 
 export default function App() {
   const [store, setStore] = useState<DiveStore | null>(null);
@@ -464,7 +464,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Freediving Log Analyzer</h1>
+        <h1>Freediving Log Explorer</h1>
         <div className="header-actions">
           <div className="header-actions-primary">
             {importMessage && (
