@@ -32,6 +32,9 @@ Maybe, if people find it useful! For now, it'll just live on my personal website
 ### Can I contribute to the codebase?
 Feel free to check out the code at https://github.com/drigberg/freediving-data-explorer and open issues or pull requests. I haven’t made a contribution guide yet, so let me know if you have any questions!
 
+### I want to make my own version of this app. Mind if I fork the repo?
+Go for it, and please share whatever you build! DM me if you have any questions about how to deploy it.
+
 ## Screenshots
 
 **Dive profiles: deepest dive by discipline**
