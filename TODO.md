@@ -1,11 +1,11 @@
-- Show presets in timeline view
-- Allow aggregation in timeline view
+- Overview:
+  - Show presets in timeline view, and move presets to its own section, since it applies to both filtering and grouping
+  - Switch "clear filters" button to "clear filtering and grouping options"
+  - Allow aggregation in timeline view
+  - Show some sort of calculated chart titles
 - Data:
-  - Allow trimming the ends of dives and inserting 0s at the beginning
-  - Allow manually inputting dives as max depth + duration + date and time
-  - Allow importing existing config file
-  - Store data in local storage?
-- Add breakpoints for mobile!
+  - Get rid of "keep" and "discard" buttons, OR just set a minimum requirement for regions (Minimum 2m and 5s?)
+    Allow editing and removing tags for individual dives
 - Exposure suit options:
   - None
   - Shorty
@@ -14,9 +14,5 @@
   - Show thermocline somehow?
   - "Visualization mode": show a diver on a vertical line, and move it according to dive data, with "play" and "pause" buttons, plus a slider to click and drag through time.
     - Bonus: bubbles and jellyfish
-- Show some sort of chart titles (possibly calculated)
-- Fix flicker when switching between modes
-- Allow editing and removing tags for individual dives
-- Allow adding tags for all dives by date
-- Allow adding tags for all dives matching current filters
-- "Add discipline" button for individual dives
+- Bugs
+  - Fix flicker when switching between modes
