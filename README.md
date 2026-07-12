@@ -6,7 +6,7 @@ See it in action at https://danielrigberg.com/freediving-log-explorer.html
 
 ## About
 
-This web app provides a UI for tagging and graphing freediving logs to track progress and investigate areas of improvement.
+This web app provides a UI for tagging and graphing freediving logs to track progress and investigate areas of improvement! I made this app because my dive computer is great, but its desktop app is optimized for scuba diving, so I wasn't able to compare dive profiles meaningfully. This app is designed specifically for freediving! Also, it has lots of pretty colors.
 
 ## Frequently Asked Questions
 
