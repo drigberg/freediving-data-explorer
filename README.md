@@ -26,6 +26,9 @@ Yes! Just click the “Manual Entry” button.
 ### My dive computer exports to a different file type. Will you add support for it?
 Of course! Just send me a sample, and I’ll make it happen.
 
+### My dive logs have a bunch of trailing surface time at the end -- do I have to edit them manually to fix that?
+If you select one of these dives in the Dive Details tab, you should see a "Trim/Split" button above the graph. Clicking this will auto-detect surface intervals, allowing you to select which portions should be discarded or treated as independent dives. You can also insert and position missing "depth 0" data points, if your log starts while you were already underwater or ends before you reached the surface.
+
 ### Will this ever be added to any freediving community websites?
 Maybe, if people find it useful! For now, it'll just live on my personal website.
 
