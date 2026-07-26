@@ -15,6 +15,7 @@ export interface DiveFilterConfig {
   dateTo: string | null;
   duration: NullableIntRange;
   maxDepth: NullableIntRange;
+  tags: string[];
 }
 
 export interface DiveFilterOptions {
@@ -40,6 +41,7 @@ export function defaultDiveFilters(): DiveFilterConfig {
     dateTo: null,
     duration: emptyIntRange(),
     maxDepth: emptyIntRange(),
+    tags: []
   };
 }
 
@@ -188,6 +190,13 @@ export function divePassesFilters(
   if (filters.exposureSuits.length > 0) {
     const suit = data.exposureSuits[index];
     if (!suit || !filters.exposureSuits.includes(formatExposureSuit(suit))) {
+      return false;
+    }
+  }
+
+  if (filters.tags.length > 0) {
+    const tag = data.tags?.[index];
+    if (!tag || !filters.tags.includes(tag)) {
       return false;
     }
   }

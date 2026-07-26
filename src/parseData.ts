@@ -19,6 +19,7 @@ export interface DiveData {
   disciplines: (string | undefined)[];
   weights: (number | undefined)[];
   exposureSuits: (ExposureSuit | undefined)[];
+  tags?: string[]
   archived?: boolean[];
 }
 

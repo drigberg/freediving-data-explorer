@@ -1,6 +1,4 @@
 - Overview:
-  - Show presets in timeline view, and move presets to its own section, since it applies to both filtering and grouping
-  - Switch "clear filters" button to "clear filtering and grouping options"
   - Allow filtering by temperature range, applied to min, max, or overlap
   - Allow aggregation in timeline view
   - Show some sort of calculated chart titles

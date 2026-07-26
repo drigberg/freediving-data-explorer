@@ -1,10 +1,12 @@
 import { disciplineAbbrev, disciplineFilterChipClass } from "./disciplines";
 import type { DiveFilterConfig, DiveFilterOptions } from "./filters";
 import { defaultDiveFilters, hasActiveFilters } from "./filters";
+import { Tag } from "./grouping";
 
 interface FilterControlsProps {
   filters: DiveFilterConfig;
   options: DiveFilterOptions;
+  tags: Tag[];
   visibleCount: number;
   totalCount: number;
   onChange: (filters: DiveFilterConfig) => void;
@@ -61,6 +63,7 @@ function FilterChips({
 
 export default function FilterControls({
   filters,
+  tags,
   options,
   visibleCount,
   totalCount,
@@ -70,7 +73,7 @@ export default function FilterControls({
     onChange({ ...filters, ...patch });
 
   const active = hasActiveFilters(filters);
-
+  
   return (
     <div className="filter-controls">
       <div className="filter-main">
@@ -235,6 +238,22 @@ export default function FilterControls({
             />
           </div>
         </div>
+
+        {tags.length > 0 && (
+          <div className="filter-group">
+            <span className="filter-sublabel">Tags</span>
+            <FilterChips
+              values={tags.map(tag => tag.name)}
+              selected={filters.tags.map(tag => tag)}
+              onToggle={(tagName) =>
+                update({
+                  tags: toggleValue(filters.tags, tagName),
+                })
+              }
+              formatLabel={(tag) => tag}
+            />
+          </div>
+        )}
       </div>
 
       <div className="filter-actions">

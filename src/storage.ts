@@ -25,7 +25,7 @@ export interface StoredTag {
 
 export interface DiveStore {
   dives: StoredDive[];
-  tags: StoredTag[];
+  tags?: StoredTag[];
 }
 
 const LOCAL_STORAGE_KEY = "freediving-dives-store";
@@ -81,10 +81,10 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
     "Safety:",
     "Exposure Suit:",
   ];
-  const legacyTags = store.tags.filter((t) =>
+  const legacyTags = store.tags?.filter((t) =>
     legacyPrefixes.some((p) => t.name.startsWith(p)),
   );
-  if (legacyTags.length === 0) return store;
+  if (legacyTags == null || legacyTags.length === 0) return store;
 
   const dives = store.dives.map((d) => ({ ...d }));
   const datetimeToIndex = new Map(dives.map((d, i) => [d.datetime, i]));
@@ -135,7 +135,7 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
 
   return {
     dives,
-    tags: store.tags.filter(
+    tags: store.tags?.filter(
       (t) => !legacyPrefixes.some((p) => t.name.startsWith(p)),
     ),
   };
@@ -405,7 +405,7 @@ export function replaceDiveWithSplits(
   );
   const newDatetimes = newDives.map((dive) => dive.datetime).sort();
 
-  const tags = store.tags.map((tag) => {
+  const tags = store.tags?.map((tag) => {
     if (!tag.diveDatetimes.includes(originalDatetime)) return tag;
     const withoutOriginal = tag.diveDatetimes.filter(
       (datetime) => datetime !== originalDatetime,
