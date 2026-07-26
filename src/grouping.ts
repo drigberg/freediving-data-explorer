@@ -17,7 +17,7 @@ export type GroupMode =
   | "weight"
   | "exposureSuit"
   | "temperature";
-export type DateIntervalUnit = "day" | "month" | "quarter" | "year";
+export type DateIntervalUnit = "day" | "week" |"month" | "quarter" | "year";
 export type TemperatureIncrement = 1 | 5 | 10;
 export type TemperatureMode = "max" | "min" | "difference";
 export type DisplayMode = "average" | "maximum";
@@ -238,9 +238,15 @@ function getMaxDepth(points: ProfilePoint[]): number {
 function dateIntervalKey(date: Date, unit: DateIntervalUnit): string {
   const y = date.getFullYear();
   const m = date.getMonth();
+  const d = date.getDay();
   switch (unit) {
     case "day":
       return `${y}-${m + 1}-${date.getDate()}`;
+    case "week":
+      const yearStart = new Date(date.getFullYear(), 0, 1);
+      const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + yearStart.getDay() + 1) / 7);
+      
+      return week.toString()
     case "month": {
       const months = [
         "Jan",
@@ -552,9 +558,12 @@ function seriesDisciplineColor(
 function dateIntervalStartDate(date: Date, unit: DateIntervalUnit): Date {
   const y = date.getFullYear();
   const m = date.getMonth();
+  const d = date.getDay()
   switch (unit) {
     case "day":
       return new Date(y, m, date.getDate());
+    case "week":
+        return new Date(y, )
     case "month":
       return new Date(y, m, 1);
     case "quarter":

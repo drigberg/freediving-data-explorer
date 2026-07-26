@@ -1,13 +1,21 @@
 - Overview:
   - Show presets in timeline view, and move presets to its own section, since it applies to both filtering and grouping
   - Switch "clear filters" button to "clear filtering and grouping options"
+  - Allow filtering by temperature range, applied to min, max, or overlap
   - Allow aggregation in timeline view
   - Show some sort of calculated chart titles
+  - Allow deleting unused tags
+  - Set list of default "other" tags
+  - Allow grouping and filtering by custom tags
+  - Allow selecting "average + longest" in timeline view
+  - Pie chart view: what proportion of dives match the current filters?
+    - Grouping determines proportions, filters determine the pool
+  - Allow resetting dive numbers, or automatically reset on import
 - Data:
   - Trimming:
     - Get rid of "keep" and "discard" buttons, OR just set a minimum requirement for regions (Minimum 2m and 5s?)
     - Make "keep" regions more obvious
-  - Allow editing and removing tags for individual dives
+  - Allow removing tags from dive-details view
 - Exposure suit options:
   - None
   - Shorty

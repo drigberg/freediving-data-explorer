@@ -80,11 +80,12 @@ export default function GroupingControls({
         <div className="grouping-row">
           <span className="grouping-label">Time interval</span>
           <SegmentButtons<DateIntervalUnit>
-            options={["day", "month", "quarter", "year"]}
+            options={["day", "week", "month", "quarter", "year"]}
             value={config.dateIntervalUnit}
             onChange={(dateIntervalUnit) => update({ dateIntervalUnit })}
             labels={{
               day: "Day",
+              week: "Week",
               month: "Month",
               quarter: "Quarter",
               year: "Year",
@@ -150,11 +151,12 @@ export default function GroupingControls({
           <div className="grouping-row">
             <span className="grouping-label">Interval</span>
             <SegmentButtons<DateIntervalUnit>
-              options={["day", "month", "quarter", "year"]}
+              options={["day", "week", "month", "quarter", "year"]}
               value={config.dateIntervalUnit}
               onChange={(dateIntervalUnit) => update({ dateIntervalUnit })}
               labels={{
                 day: "Day",
+                week: "Week",
                 month: "Month",
                 quarter: "Quarter",
                 year: "Year",
