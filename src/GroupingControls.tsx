@@ -76,6 +76,32 @@ export default function GroupingControls({
 
   return (
     <div className="grouping-controls">
+      <div className="grouping-row">
+        <span className="grouping-label">Preset</span>
+        <select
+          className="grouping-preset-select"
+          value={activePreset?.id ?? ""}
+          onChange={(e) => {
+            const presetId = e.target.value;
+            e.target.blur();
+            if (!presetId) return;
+            const preset = GROUPING_PRESETS.find((p) => p.id === presetId);
+            if (!preset) return;
+            onChange(preset.config);
+            onFiltersChange(
+              resolvePresetFilters(preset.filters, availableDisciplines),
+            );
+          }}
+        >
+          {activePreset ? null : <option value="">Custom</option>}
+          {GROUPING_PRESETS.filter(p => p.config.viewMode === config.viewMode).map((preset) => (
+            <option key={preset.id} value={preset.id}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {isTimeline ? (
         <div className="grouping-row">
           <span className="grouping-label">Time interval</span>
@@ -92,33 +118,7 @@ export default function GroupingControls({
             }}
           />
         </div>
-      ) : (
-        <div className="grouping-row">
-          <span className="grouping-label">Preset</span>
-          <select
-            className="grouping-preset-select"
-            value={activePreset?.id ?? ""}
-            onChange={(e) => {
-              const presetId = e.target.value;
-              e.target.blur();
-              if (!presetId) return;
-              const preset = GROUPING_PRESETS.find((p) => p.id === presetId);
-              if (!preset) return;
-              onChange(preset.config);
-              onFiltersChange(
-                resolvePresetFilters(preset.filters, availableDisciplines),
-              );
-            }}
-          >
-            {activePreset ? null : <option value="">Custom</option>}
-            {GROUPING_PRESETS.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      ) : null}
 
       <div className="grouping-manual">
         <div className="grouping-row">
