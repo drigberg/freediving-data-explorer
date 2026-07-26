@@ -108,15 +108,28 @@ export default function App() {
     });
   }, []);
 
-  const handleTagsChange = useCallback((newTags: Tag[]) => {
-    setTags(newTags);
-    setStore((prev) => {
-      if (!prev) return prev;
-      const updated = applyTagsToStore(prev, newTags);
-      saveStore(updated);
-      return updated;
-    });
-  }, []);
+  const sidebarTags = useMemo(
+    () =>
+      store
+        ? tagsFromStore(store, { includeArchived: showArchivedDives })
+        : [],
+    [store, showArchivedDives],
+  );
+
+  const handleTagsChange = useCallback(
+    (newTags: Tag[]) => {
+      setStore((prev) => {
+        if (!prev) return prev;
+        const updated = applyTagsToStore(prev, newTags, {
+          includeArchived: showArchivedDives,
+        });
+        saveStore(updated);
+        setTags(tagsFromStore(updated));
+        return updated;
+      });
+    },
+    [showArchivedDives],
+  );
 
   const handleDisciplinesAssign = useCallback(
     (indices: number[], discipline: string) => {
@@ -677,7 +690,7 @@ export default function App() {
           activeDiveIndex={activeSidebarDive}
           onDiveActivate={setActiveSidebarDive}
           onToggleVisibility={toggleVisibility}
-          tags={tags}
+          tags={sidebarTags}
           onTagsChange={handleTagsChange}
           onDisciplinesAssign={handleDisciplinesAssign}
           onWeightAssign={handleWeightAssign}

@@ -260,8 +260,11 @@ export function diveDataFromStore(
 
 // ── Tags ──
 
-export function tagsFromStore(store: DiveStore): Tag[] {
-  const dives = activeDives(store);
+export function tagsFromStore(
+  store: DiveStore,
+  options: { includeArchived?: boolean } = {},
+): Tag[] {
+  const dives = sortedDives(store, options.includeArchived ?? false);
   const byName = new Map<string, Set<number>>();
   dives.forEach((d, i) => {
     for (const name of d.tags ?? []) {
@@ -274,14 +277,18 @@ export function tagsFromStore(store: DiveStore): Tag[] {
     .map(([name, diveIndices]) => ({ name, diveIndices }));
 }
 
-export function applyTagsToStore(store: DiveStore, tags: Tag[]): DiveStore {
-  const active = activeDives(store);
+export function applyTagsToStore(
+  store: DiveStore,
+  tags: Tag[],
+  options: { includeArchived?: boolean } = {},
+): DiveStore {
+  const dives = sortedDives(store, options.includeArchived ?? false);
   const datetimeToTags = new Map<string, string[]>(
-    active.map((d) => [d.datetime, [] as string[]]),
+    dives.map((d) => [d.datetime, [] as string[]]),
   );
   for (const t of tags) {
     for (const i of t.diveIndices) {
-      const datetime = active[i]?.datetime;
+      const datetime = dives[i]?.datetime;
       if (!datetime) continue;
       datetimeToTags.get(datetime)!.push(t.name);
     }
