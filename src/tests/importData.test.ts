@@ -16,18 +16,15 @@ describe("parseStoreFromJson", () => {
     expect(store.dives[0].datetime).toBe("2026-01-15T10:30:00Z");
     expect(store.dives[0].diveNumber).toBe(1);
     expect(store.dives[0].discipline).toBe("Free Immersion");
-    expect(store.tags).toHaveLength(1);
-    expect(store.tags[0].name).toBe("Pool session");
+    expect(store.dives[0].tags).toEqual(["Pool session"]);
+    expect(store.tags).toBeUndefined();
   });
 
   it("throws on invalid JSON", () => {
     expect(() => parseStoreFromJson("{not json")).toThrow("Invalid JSON");
   });
 
-  it("throws when dives or tags are missing", () => {
-    expect(() => parseStoreFromJson('{"dives":[]}')).toThrow(
-      "Invalid data.json format",
-    );
+  it("throws when dives are missing", () => {
     expect(() => parseStoreFromJson('{"tags":[]}')).toThrow(
       "Invalid data.json format",
     );
@@ -66,7 +63,30 @@ describe("parseStoreFromJson", () => {
     const store = parseStoreFromJson(JSON.stringify(emptyStore()));
 
     expect(store.dives).toHaveLength(0);
-    expect(store.tags).toHaveLength(0);
+    expect(store.tags).toBeUndefined();
+  });
+
+  it("migrates legacy top-level tags onto dives", () => {
+    const store = parseStoreFromJson(
+      JSON.stringify({
+        dives: [
+          {
+            datetime: "2026-01-15T10:30:00Z",
+            diveNumber: 1,
+            profile: [[0, 0], [10, -5]],
+          },
+        ],
+        tags: [
+          {
+            name: "Pool session",
+            diveDatetimes: ["2026-01-15T10:30:00Z"],
+          },
+        ],
+      }),
+    );
+
+    expect(store.dives[0].tags).toEqual(["Pool session"]);
+    expect(store.tags).toBeUndefined();
   });
 });
 
@@ -76,7 +96,7 @@ describe("importDataFile", () => {
     const store = await importDataFile(file);
 
     expect(store.dives).toHaveLength(1);
-    expect(store.tags).toHaveLength(1);
+    expect(store.dives[0].tags).toEqual(["Pool session"]);
   });
 
   it("rejects non-.json files", async () => {

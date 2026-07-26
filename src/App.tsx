@@ -7,7 +7,6 @@ import {
   type Tag,
 } from "./grouping";
 import {
-  activeDives,
   archiveDivesByDatetime,
   restoreDivesByDatetime,
   addManualDiveToStore,
@@ -20,8 +19,8 @@ import {
   setDiveDisciplines,
   setDiveExposureSuits,
   setDiveWeights,
-  tagsFromStored,
-  tagsToStored,
+  applyTagsToStore,
+  tagsFromStore,
   replaceDiveWithSplits,
   parseStoreFromJson,
   type DiveStore,
@@ -80,7 +79,7 @@ export default function App() {
   useEffect(() => {
     loadStore().then((loaded) => {
       setStore(loaded);
-      setTags(tagsFromStored(loaded.tags ?? [], activeDives(loaded)));
+      setTags(tagsFromStore(loaded));
       setGroupingConfig(defaultGroupingConfig());
     });
   }, []);
@@ -113,10 +112,7 @@ export default function App() {
     setTags(newTags);
     setStore((prev) => {
       if (!prev) return prev;
-      const updated: DiveStore = {
-        ...prev,
-        tags: tagsToStored(newTags, activeDives(prev)),
-      };
+      const updated = applyTagsToStore(prev, newTags);
       saveStore(updated);
       return updated;
     });
@@ -168,7 +164,7 @@ export default function App() {
         if (!prev) return prev;
         const updated = archiveDivesByDatetime(prev, [datetime]);
         saveStore(updated);
-        setTags(tagsFromStored(updated.tags ?? [], activeDives(updated)));
+        setTags(tagsFromStore(updated));
         return updated;
       });
       setActiveSidebarDive(null);
@@ -186,7 +182,7 @@ export default function App() {
       const updated = restoreDivesByDatetime(store, [datetime]);
       setStore(updated);
       saveStore(updated);
-      setTags(tagsFromStored(updated.tags ?? [], activeDives(updated)));
+      setTags(tagsFromStore(updated));
       setShowArchivedDives(false);
 
       const nextData = diveDataFromStore(updated, { includeArchived: false });
@@ -261,7 +257,7 @@ export default function App() {
         const { store: merged, added } = await importDiveFiles(store, files);
         setStore(merged);
         saveStore(merged);
-        setTags(tagsFromStored(merged.tags ?? [], activeDives(merged)));
+        setTags(tagsFromStore(merged));
         setImportMessage(
           added > 0
             ? `Imported ${added} new dive${added === 1 ? "" : "s"}`
@@ -288,7 +284,7 @@ export default function App() {
         const imported = await importDataFile(file);
         setStore(imported);
         saveStore(imported);
-        setTags(tagsFromStored(imported.tags ?? [], activeDives(imported)));
+        setTags(tagsFromStore(imported));
         setHiddenDives(new Set());
         setActiveSidebarDive(null);
         setImportMessage(
@@ -314,7 +310,7 @@ export default function App() {
       const imported = parseStoreFromJson(await res.text());
       setStore(imported);
       saveStore(imported);
-      setTags(tagsFromStored(imported.tags ?? [], activeDives(imported)));
+      setTags(tagsFromStore(imported));
       setHiddenDives(new Set());
       setActiveSidebarDive(null);
       setImportMessage(
@@ -341,7 +337,7 @@ export default function App() {
         } else {
           setStore(merged);
           saveStore(merged);
-          setTags(tagsFromStored(merged.tags?? [], activeDives(merged)));
+          setTags(tagsFromStore(merged));
           setImportMessage("Added dive");
           setShowManualDiveDialog(false);
         }
@@ -438,7 +434,7 @@ export default function App() {
 
       setStore(updated);
       saveStore(updated);
-      setTags(tagsFromStored(updated.tags ?? [], activeDives(updated)));
+      setTags(tagsFromStore(updated));
 
       const refreshedListData = diveDataFromStore(updated, {
         includeArchived: showArchivedDives,

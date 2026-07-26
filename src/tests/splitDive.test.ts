@@ -685,54 +685,14 @@ describe("buildSplitDives", () => {
 });
 
 describe("replaceDiveWithSplits", () => {
-  it("removes the original dive, inserts new dives, and remaps tag datetimes", () => {
+  it("removes the original dive, inserts new dives, and copies tags to splits", () => {
     const store: DiveStore = {
       dives: [
         {
           datetime: "2026-03-01T12:00:00Z",
           diveNumber: 1,
           profile: multiRegionProfile,
-        },
-      ],
-      tags: [
-        {
-          name: "Pool day",
-          diveDatetimes: ["2026-03-01T12:00:00Z"],
-        },
-      ],
-    };
-    const original = store.dives[0];
-    const regionProfiles = extractRegionProfiles(
-      multiRegionProfile,
-      detectDiveRegions(multiRegionProfile),
-    );
-    const newDives = buildSplitDives(original, regionProfiles, emptyStore());
-    const { store: updated, newDatetimes } = replaceDiveWithSplits(
-      store,
-      original.datetime,
-      newDives,
-    );
-
-    expect(updated.dives.map((dive) => dive.datetime)).toEqual(
-      newDives.map((dive) => dive.datetime).sort(),
-    );
-    expect(updated.dives).toHaveLength(2);
-    expect(updated.tags[0].diveDatetimes).toEqual(newDatetimes);
-  });
-
-  it("leaves tags alone when they do not reference the original dive", () => {
-    const store: DiveStore = {
-      dives: [
-        {
-          datetime: "2026-03-01T12:00:00Z",
-          diveNumber: 1,
-          profile: multiRegionProfile,
-        },
-      ],
-      tags: [
-        {
-          name: "Other day",
-          diveDatetimes: ["2026-03-02T12:00:00Z"],
+          tags: ["Pool day"],
         },
       ],
     };
@@ -748,7 +708,43 @@ describe("replaceDiveWithSplits", () => {
       newDives,
     );
 
-    expect(updated.tags[0].diveDatetimes).toEqual(["2026-03-02T12:00:00Z"]);
+    expect(updated.dives.map((dive) => dive.datetime)).toEqual(
+      newDives.map((dive) => dive.datetime).sort(),
+    );
+    expect(updated.dives).toHaveLength(2);
+    expect(updated.dives.every((d) => d.tags?.includes("Pool day"))).toBe(true);
+  });
+
+  it("leaves other dives' tags alone when splitting an untagged dive", () => {
+    const store: DiveStore = {
+      dives: [
+        {
+          datetime: "2026-03-01T12:00:00Z",
+          diveNumber: 1,
+          profile: multiRegionProfile,
+        },
+        {
+          datetime: "2026-03-02T12:00:00Z",
+          diveNumber: 2,
+          profile: singleRegionProfile,
+          tags: ["Other day"],
+        },
+      ],
+    };
+    const original = store.dives[0];
+    const regionProfiles = extractRegionProfiles(
+      multiRegionProfile,
+      detectDiveRegions(multiRegionProfile),
+    );
+    const newDives = buildSplitDives(original, regionProfiles, emptyStore());
+    const { store: updated } = replaceDiveWithSplits(
+      store,
+      original.datetime,
+      newDives,
+    );
+
+    const other = updated.dives.find((d) => d.datetime === "2026-03-02T12:00:00Z");
+    expect(other?.tags).toEqual(["Other day"]);
   });
 
   it("sorts the merged dives by datetime", () => {

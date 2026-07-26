@@ -195,8 +195,8 @@ export function divePassesFilters(
   }
 
   if (filters.tags.length > 0) {
-    const tag = data.tags?.[index];
-    if (!tag || !filters.tags.includes(tag)) {
+    const diveTags = data.tags?.[index] ?? [];
+    if (!filters.tags.some((tag) => diveTags.includes(tag))) {
       return false;
     }
   }
@@ -231,6 +231,7 @@ export function sliceDiveData(data: DiveData, indices: number[]): DiveData {
     disciplines: indices.map((i) => data.disciplines[i]),
     weights: indices.map((i) => data.weights[i]),
     exposureSuits: indices.map((i) => data.exposureSuits[i]),
+    tags: data.tags ? indices.map((i) => data.tags![i]) : undefined,
   };
 }
 

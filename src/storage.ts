@@ -15,6 +15,7 @@ export interface StoredDive {
   discipline?: string;
   weightKg?: number;
   exposureSuit?: ExposureSuit;
+  tags?: string[];
   archived?: boolean;
 }
 
@@ -31,7 +32,7 @@ export interface DiveStore {
 const LOCAL_STORAGE_KEY = "freediving-dives-store";
 
 export function emptyStore(): DiveStore {
-  return { dives: [], tags: [] };
+  return { dives: [] };
 }
 
 // ── Migrations ──
@@ -55,12 +56,13 @@ function migrateToNewDiveFormat(store: DiveStore): DiveStore {
   });
 
   let tagChanged = false;
-  const tags = (store.tags as LegacyTag[]).map((t): StoredTag => {
-    if (t.diveDates && !t.diveDatetimes) {
+  const tags = (store.tags ?? []).map((t): StoredTag => {
+    const legacy = t as LegacyTag;
+    if (legacy.diveDates && !legacy.diveDatetimes) {
       tagChanged = true;
       return {
-        name: t.name,
-        diveDatetimes: t.diveDates.map((d) => d + "T00:00:00Z"),
+        name: legacy.name,
+        diveDatetimes: legacy.diveDates.map((d) => d + "T00:00:00Z"),
       };
     }
     return t as StoredTag;
@@ -141,6 +143,38 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
   };
 }
 
+/**
+ * Moves top-level store tags onto each dive's `tags` array and drops `store.tags`.
+ */
+function migrateTopLevelTagsToDives(store: DiveStore): DiveStore {
+  const storedTags = store.tags;
+  if (storedTags == null || storedTags.length === 0) return store;
+
+  const datetimeToIndex = new Map(
+    store.dives.map((d, i) => [d.datetime, i]),
+  );
+  const diveTags = store.dives.map((d) => [...(d.tags ?? [])]);
+
+  for (const tag of storedTags) {
+    for (const datetime of tag.diveDatetimes) {
+      const idx = datetimeToIndex.get(datetime);
+      if (idx === undefined) continue;
+      const names = diveTags[idx];
+      if (!names.includes(tag.name)) {
+        names.push(tag.name);
+      }
+    }
+  }
+
+  const dives = store.dives.map((d, i) => ({
+    ...d,
+    tags: diveTags[i].sort(),
+  }));
+
+  const { tags: _removed, ...rest } = store;
+  return { ...rest, dives };
+}
+
 function profilePointsEqual(
   a: ProfilePoint[],
   b: ProfilePoint[],
@@ -219,35 +253,50 @@ export function diveDataFromStore(
     disciplines: sorted.map((d) => d.discipline),
     weights: sorted.map((d) => d.weightKg),
     exposureSuits: sorted.map((d) => d.exposureSuit),
+    tags: sorted.map((d) => d.tags ?? []),
     archived: sorted.map((d) => d.archived === true),
   };
 }
 
 // ── Tags ──
 
-export function tagsFromStored(
-  stored: StoredTag[],
-  dives: StoredDive[],
-): Tag[] {
-  const datetimeToIndex = new Map(dives.map((d, i) => [d.datetime, i]));
-  return stored.map((t) => ({
-    name: t.name,
-    diveIndices: new Set(
-      t.diveDatetimes
-        .map((dt) => datetimeToIndex.get(dt))
-        .filter((i): i is number => i !== undefined),
-    ),
-  }));
+export function tagsFromStore(store: DiveStore): Tag[] {
+  const dives = activeDives(store);
+  const byName = new Map<string, Set<number>>();
+  dives.forEach((d, i) => {
+    for (const name of d.tags ?? []) {
+      if (!byName.has(name)) byName.set(name, new Set());
+      byName.get(name)!.add(i);
+    }
+  });
+  return [...byName.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, diveIndices]) => ({ name, diveIndices }));
 }
 
-export function tagsToStored(tags: Tag[], dives: StoredDive[]): StoredTag[] {
-  return tags.map((t) => ({
-    name: t.name,
-    diveDatetimes: [...t.diveIndices]
-      .map((i) => dives[i]?.datetime)
-      .filter((dt): dt is string => dt !== undefined)
-      .sort(),
-  }));
+export function applyTagsToStore(store: DiveStore, tags: Tag[]): DiveStore {
+  const active = activeDives(store);
+  const datetimeToTags = new Map<string, string[]>(
+    active.map((d) => [d.datetime, [] as string[]]),
+  );
+  for (const t of tags) {
+    for (const i of t.diveIndices) {
+      const datetime = active[i]?.datetime;
+      if (!datetime) continue;
+      datetimeToTags.get(datetime)!.push(t.name);
+    }
+  }
+  for (const [datetime, names] of datetimeToTags) {
+    datetimeToTags.set(datetime, [...new Set(names)].sort());
+  }
+  return {
+    ...store,
+    dives: store.dives.map((d) => {
+      const names = datetimeToTags.get(d.datetime);
+      if (names === undefined) return d;
+      return { ...d, tags: names };
+    }),
+  };
 }
 
 // ── Updaters ──
@@ -372,7 +421,7 @@ function mergeParsedDivesIntoStore(
   );
 
   return {
-    store: { dives, tags: store.tags },
+    store: { dives },
     added: newDives.length,
   };
 }
@@ -400,24 +449,21 @@ export function replaceDiveWithSplits(
   newDives: StoredDive[],
 ): { store: DiveStore; newDatetimes: string[] } {
   const dives = store.dives.filter((dive) => dive.datetime !== originalDatetime);
-  const merged = [...dives, ...newDives].sort((a, b) =>
-    a.datetime.localeCompare(b.datetime),
-  );
   const newDatetimes = newDives.map((dive) => dive.datetime).sort();
 
-  const tags = store.tags?.map((tag) => {
-    if (!tag.diveDatetimes.includes(originalDatetime)) return tag;
-    const withoutOriginal = tag.diveDatetimes.filter(
-      (datetime) => datetime !== originalDatetime,
-    );
-    return {
-      ...tag,
-      diveDatetimes: [...withoutOriginal, ...newDatetimes].sort(),
-    };
-  });
+  const original = store.dives.find((d) => d.datetime === originalDatetime);
+  const inheritedTags = original?.tags ?? [];
+  const splitDives = newDives.map((d) => ({
+    ...d,
+    tags: [...inheritedTags],
+  }));
+
+  const merged = [...dives, ...splitDives].sort((a, b) =>
+    a.datetime.localeCompare(b.datetime),
+  );
 
   return {
-    store: { dives: merged, tags },
+    store: { dives: merged },
     newDatetimes,
   };
 }
@@ -435,7 +481,7 @@ export function addManualDiveToStore(
   );
 
   return {
-    store: { dives, tags: store.tags },
+    store: { dives },
     added: 1,
   };
 }
@@ -446,6 +492,14 @@ function isValidDiveEntry(d: unknown): boolean {
   if (!d || typeof d !== "object") return false;
   const dive = d as Record<string, unknown>;
   if (!Array.isArray(dive.profile)) return false;
+  if (dive.tags !== undefined) {
+    if (
+      !Array.isArray(dive.tags) ||
+      !dive.tags.every((t) => typeof t === "string")
+    ) {
+      return false;
+    }
+  }
   if (
     typeof dive.datetime === "string" &&
     typeof dive.diveNumber === "number"
@@ -463,10 +517,11 @@ function isValidTagEntry(t: unknown): boolean {
 function isDiveStore(value: unknown): value is DiveStore {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  if (!Array.isArray(v.dives) || !Array.isArray(v.tags)) return false;
-  return (
-    v.dives.every(isValidDiveEntry) && v.tags.every(isValidTagEntry)
-  );
+  if (!Array.isArray(v.dives)) return false;
+  if (v.tags !== undefined) {
+    if (!Array.isArray(v.tags) || !v.tags.every(isValidTagEntry)) return false;
+  }
+  return v.dives.every(isValidDiveEntry);
 }
 
 /** Runs migrations and profile normalization on a store. */
@@ -475,7 +530,9 @@ export function prepareStore(store: DiveStore): {
   profilesTrimmed: boolean;
 } {
   const { store: trimmed, changed: profilesTrimmed } = normalizeDiveProfiles(
-    migrateSafetyProperty(migrateLegacyTags(migrateToNewDiveFormat(store))),
+    migrateTopLevelTagsToDives(
+      migrateSafetyProperty(migrateLegacyTags(migrateToNewDiveFormat(store))),
+    ),
   );
   return { store: trimmed, profilesTrimmed };
 }

@@ -252,14 +252,12 @@ function getMaxDepth(points: ProfilePoint[]): number {
 function dateIntervalKey(date: Date, unit: DateIntervalUnit): string {
   const y = date.getFullYear();
   const m = date.getMonth();
-  const d = date.getDay();
   switch (unit) {
     case "day":
       return `${y}-${m + 1}-${date.getDate()}`;
     case "week":
       const yearStart = new Date(date.getFullYear(), 0, 1);
       const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + yearStart.getDay() + 1) / 7);
-      
       return week.toString()
     case "month": {
       const months = [
@@ -572,12 +570,13 @@ function seriesDisciplineColor(
 function dateIntervalStartDate(date: Date, unit: DateIntervalUnit): Date {
   const y = date.getFullYear();
   const m = date.getMonth();
-  const d = date.getDay()
   switch (unit) {
     case "day":
       return new Date(y, m, date.getDate());
     case "week":
-        return new Date(y, )
+      const yearStart = new Date(date.getFullYear(), 0, 1);
+      const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + yearStart.getDay() + 1) / 7);
+      return new Date(yearStart.getTime() + week * (1000 * 60 * 60 * 24 * 7))
     case "month":
       return new Date(y, m, 1);
     case "quarter":
@@ -836,9 +835,7 @@ export function processData(
           : coalesceDeepest(data.seriesData, group.indices);
       seriesPoints = result.data;
       primaryDiveIndex = result.pickedIndex;
-      const pickedName = data.seriesNames[result.pickedIndex];
-      const dateMatch = pickedName.match(/^[\d-]+/)?.[0] ?? "";
-      label = `${group.label} [${dateMatch}]`;
+      label = `${group.label}`;
     }
 
     return {
