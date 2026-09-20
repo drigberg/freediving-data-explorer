@@ -868,7 +868,7 @@ export default function Chart2D({
           splitLine: { show: false },
         },
         visualMap: {
-          min: 1,
+          min: 0,
           max: maxCount || 1,
           calculable: true,
           orient: "horizontal",
@@ -876,13 +876,14 @@ export default function Chart2D({
           bottom: 0,
           inRange: {
             color: ["#0e1726", "#1f6feb", "#58a6ff", "#a371f7", "#bc8cff", "#d2a8ff", "#f0f6fc"],
+            opacity: [0, 1, 1, 1, 1, 1, 1],
           },
           textStyle: { color: "#8b949e" },
         },
         series: [
           {
             type: "heatmap" as const,
-            data: heatData.filter(([, , c]) => c > 0),
+            data: heatData,
             label: { show: false },
             itemStyle: {
               borderColor: "rgba(13, 17, 23, 0.6)",
