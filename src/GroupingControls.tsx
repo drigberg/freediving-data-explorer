@@ -11,7 +11,6 @@ import {
   type RankCriterion,
   type AggregationMode,
   type HeatmapMetric,
-  type HeatmapDisplayMode,
 } from "./grouping";
 import type { DiveFilterConfig } from "./filters";
 
@@ -64,7 +63,10 @@ export default function GroupingControls({
     availableDisciplines,
   );
   const isTimeline = config.viewMode === "timeline";
-  const isHeatmap = config.viewMode === "heatmap";
+  const isMultiPointOrHeatmap =
+    isTimeline &&
+    (config.timelineVariant === "multiPoint" ||
+      config.timelineVariant === "heatmap");
 
   const groupModeOptions: GroupMode[] = isTimeline
     ? ["none", "discipline", "weight", "exposureSuit", "temperature"]
@@ -123,27 +125,16 @@ export default function GroupingControls({
         </div>
       ) : null}
 
-      {isHeatmap ? (
-        <>
-          <div className="grouping-row">
-            <span className="grouping-label">Metric</span>
-            <SegmentButtons<HeatmapMetric>
-              options={["depth", "duration"]}
-              value={config.heatmapMetric}
-              onChange={(heatmapMetric) => update({ heatmapMetric })}
-              labels={{ depth: "Depth", duration: "Duration" }}
-            />
-          </div>
-          <div className="grouping-row">
-            <span className="grouping-label">Display</span>
-            <SegmentButtons<HeatmapDisplayMode>
-              options={["scatter", "heatmap"]}
-              value={config.heatmapDisplayMode}
-              onChange={(heatmapDisplayMode) => update({ heatmapDisplayMode })}
-              labels={{ scatter: "Individual points", heatmap: "Heat map" }}
-            />
-          </div>
-        </>
+      {isMultiPointOrHeatmap ? (
+        <div className="grouping-row">
+          <span className="grouping-label">Metric</span>
+          <SegmentButtons<HeatmapMetric>
+            options={["depth", "duration"]}
+            value={config.heatmapMetric}
+            onChange={(heatmapMetric) => update({ heatmapMetric })}
+            labels={{ depth: "Depth", duration: "Duration" }}
+          />
+        </div>
       ) : (
       <div className="grouping-manual">
         <div className="grouping-row">

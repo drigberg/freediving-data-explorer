@@ -1869,6 +1869,9 @@ body,
 .chart-view-toolbar {
     flex-shrink: 0;
     align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .chart-view-toggle {

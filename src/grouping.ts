@@ -23,7 +23,8 @@ export type TemperatureMode = "max" | "min" | "difference";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
 export type AggregationMode = "none" | "distance" | "duration";
-export type ChartViewMode = "diveProfile" | "timeline" | "heatmap";
+export type ChartViewMode = "diveProfile" | "timeline";
+export type TimelineVariant = "singlePoint" | "multiPoint" | "heatmap";
 export type HeatmapMetric = "depth" | "duration";
 export type HeatmapDisplayMode = "scatter" | "heatmap";
 
@@ -36,6 +37,7 @@ export interface GroupingConfig {
   displayMode: DisplayMode;
   maximumCriterion: RankCriterion;
   aggregationMode: AggregationMode;
+  timelineVariant: TimelineVariant;
   heatmapMetric: HeatmapMetric;
   heatmapDisplayMode: HeatmapDisplayMode;
 }
@@ -83,6 +85,7 @@ export function defaultGroupingConfig(): GroupingConfig {
     displayMode: "maximum",
     maximumCriterion: "deepest",
     aggregationMode: "none",
+    timelineVariant: "singlePoint",
     heatmapMetric: "depth",
     heatmapDisplayMode: "scatter",
   };
@@ -124,6 +127,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "deepest",
       aggregationMode: "none",
+      timelineVariant: "singlePoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     },
@@ -143,6 +147,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "longest",
       aggregationMode: "none",
+      timelineVariant: "singlePoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     },
@@ -159,6 +164,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "average",
       maximumCriterion: "longest",
       aggregationMode: "none",
+      timelineVariant: "singlePoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     },
@@ -175,6 +181,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "average",
       maximumCriterion: "longest",
       aggregationMode: "distance",
+      timelineVariant: "singlePoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     },
@@ -191,6 +198,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "longest",
       aggregationMode: "none",
+      timelineVariant: "singlePoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     },
@@ -207,6 +215,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "deepest",
       aggregationMode: "none",
+      timelineVariant: "singlePoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     },
@@ -226,6 +235,7 @@ export function groupingConfigsEqual(
     a.displayMode === b.displayMode &&
     a.maximumCriterion === b.maximumCriterion &&
     a.aggregationMode === b.aggregationMode &&
+    a.timelineVariant === b.timelineVariant &&
     a.heatmapMetric === b.heatmapMetric &&
     a.heatmapDisplayMode === b.heatmapDisplayMode
   );
@@ -797,10 +807,10 @@ function processHeatmapData(
     rawPoints.push([i, Math.round(value * 10) / 10]);
   }
 
-  const interpolated =
-    config.heatmapDisplayMode === "heatmap"
-      ? interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS)
-      : rawPoints;
+  const shouldInterpolate = config.timelineVariant === "heatmap";
+  const interpolated = shouldInterpolate
+    ? interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS)
+    : rawPoints;
 
   // Build categories for interpolated points
   const categories: string[] = interpolated.map(([x]) => {
@@ -827,7 +837,7 @@ function processHeatmapData(
   return {
     chartMode: "heatmap",
     heatmapMetric: metric,
-    heatmapDisplayMode: config.heatmapDisplayMode,
+    heatmapDisplayMode: config.timelineVariant === "heatmap" ? "heatmap" : "scatter",
     heatmapCategories: categories,
     series,
   };
@@ -904,11 +914,10 @@ export function processData(
   data: DiveData,
   config: GroupingConfig,
 ): ProcessedData {
-  if (config.viewMode === "heatmap") {
-    return processHeatmapData(data, config);
-  }
-
   if (config.viewMode === "timeline") {
+    if (config.timelineVariant === "multiPoint" || config.timelineVariant === "heatmap") {
+      return processHeatmapData(data, config);
+    }
     return processTimelineData(data, config);
   }
 

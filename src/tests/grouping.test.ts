@@ -445,7 +445,8 @@ describe("processData – heatmap view (scatter)", () => {
   it("produces heatmap chart mode with scatter display", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };
@@ -458,7 +459,8 @@ describe("processData – heatmap view (scatter)", () => {
   it("does not interpolate — one data point per dive", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };
@@ -470,7 +472,8 @@ describe("processData – heatmap view (scatter)", () => {
   it("produces a single series containing all original dive indices", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };
@@ -483,7 +486,8 @@ describe("processData – heatmap view (scatter)", () => {
   it("first and last data points match original dive values (depth)", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };
@@ -496,7 +500,8 @@ describe("processData – heatmap view (scatter)", () => {
   it("first and last data points match original dive values (duration)", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "duration",
       heatmapDisplayMode: "scatter",
     };
@@ -509,7 +514,8 @@ describe("processData – heatmap view (scatter)", () => {
   it("interpolated values stay within the range of neighboring dives", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };
@@ -535,7 +541,8 @@ describe("processData – heatmap view (density)", () => {
   it("produces heatmap chart mode with heatmap display", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "heatmap",
       heatmapMetric: "depth",
       heatmapDisplayMode: "heatmap",
     };
@@ -547,7 +554,8 @@ describe("processData – heatmap view (density)", () => {
   it("interpolates to at least 20k data points", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "heatmap",
       heatmapMetric: "depth",
       heatmapDisplayMode: "heatmap",
     };
@@ -565,7 +573,8 @@ describe("processData – heatmap ignores grouping/aggregation", () => {
   it("ignores groupMode and still produces one series", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       groupMode: "discipline",
       aggregationMode: "distance",
       heatmapMetric: "depth",
@@ -592,7 +601,8 @@ describe("processData – heatmap with empty data", () => {
   it("returns empty categories and a single empty series", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };
@@ -612,7 +622,8 @@ describe("processData – heatmap with single dive", () => {
   it("produces exactly one data point", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
-      viewMode: "heatmap",
+      viewMode: "timeline",
+      timelineVariant: "multiPoint",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };

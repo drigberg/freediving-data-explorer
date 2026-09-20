@@ -362,6 +362,8 @@ export default function Chart2D({
   const isBarChart = chartMode === "bar";
   const isTimeline = chartMode === "timeline";
   const isHeatmap = chartMode === "heatmap";
+  const isTimelineOrHeatmap = isTimeline || isHeatmap;
+  const timelineVariant = groupingConfig?.timelineVariant ?? "singlePoint";
   const viewMode = groupingConfig?.viewMode ?? "diveProfile";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
@@ -458,7 +460,9 @@ export default function Chart2D({
         groupingConfig.groupMode === "dateInterval"
           ? { groupMode: "none" }
           : {}),
-        ...(nextViewMode === "heatmap" ? { groupMode: "none" } : {}),
+        ...(nextViewMode === "timeline"
+          ? { timelineVariant: "singlePoint" }
+          : {}),
       });
     },
     [groupingConfig, onGroupingConfigChange],
@@ -875,7 +879,7 @@ export default function Chart2D({
         visualMap: {
           min: 0,
           max: maxCount || 1,
-          calculable: true,
+          calculable: false,
           orient: "horizontal",
           left: "center",
           bottom: 0,
@@ -1184,6 +1188,7 @@ export default function Chart2D({
     isHeatmap,
     isMobile,
     isTimeline,
+    isTimelineOrHeatmap,
     series,
     timelineCategories,
     timelineMetric,
@@ -1415,7 +1420,7 @@ export default function Chart2D({
 
   return (
     <div
-      className={`chart-container${isTimeline ? " chart-container--timeline" : ""}${isHeatmap ? " chart-container--heatmap" : ""}`}
+      className={`chart-container${isTimelineOrHeatmap ? " chart-container--timeline" : ""}`}
     >
       {groupingConfig && onGroupingConfigChange && (
         <div className="chart-view-toolbar">
@@ -1434,17 +1439,52 @@ export default function Chart2D({
             >
               Timeline
             </button>
-            <button
-              type="button"
-              className={viewMode === "heatmap" ? "active" : ""}
-              onClick={() => handleViewModeChange("heatmap")}
-            >
-              Heatmap
-            </button>
           </div>
+          {viewMode === "timeline" && groupingConfig && onGroupingConfigChange && (
+            <div className="segment-buttons chart-heatmap-display-toggle">
+              <button
+                type="button"
+                className={timelineVariant === "singlePoint" ? "active" : ""}
+                onClick={() =>
+                  onGroupingConfigChange({
+                    ...groupingConfig,
+                    timelineVariant: "singlePoint",
+                  })
+                }
+              >
+                Single point
+              </button>
+              <button
+                type="button"
+                className={timelineVariant === "multiPoint" ? "active" : ""}
+                onClick={() =>
+                  onGroupingConfigChange({
+                    ...groupingConfig,
+                    timelineVariant: "multiPoint",
+                    groupMode: "none",
+                  })
+                }
+              >
+                Multi-point
+              </button>
+              <button
+                type="button"
+                className={timelineVariant === "heatmap" ? "active" : ""}
+                onClick={() =>
+                  onGroupingConfigChange({
+                    ...groupingConfig,
+                    timelineVariant: "heatmap",
+                    groupMode: "none",
+                  })
+                }
+              >
+                Heatmap
+              </button>
+            </div>
+          )}
         </div>
       )}
-      {!isTimeline && !isHeatmap && (
+      {!isTimelineOrHeatmap && (
         <div className="selected-dive-info">
           <div className="selected-dive-label">
             Selected: <strong>{activeSeries.label}</strong>
@@ -1453,7 +1493,7 @@ export default function Chart2D({
         </div>
       )}
       <div
-        className={`chart-plot${!isBarChart && !isTimeline && !isHeatmap && hoveringLine ? " chart-plot--hover-line" : ""}`}
+        className={`chart-plot${!isBarChart && !isTimelineOrHeatmap && hoveringLine ? " chart-plot--hover-line" : ""}`}
       >
         <ReactECharts
           option={option}
