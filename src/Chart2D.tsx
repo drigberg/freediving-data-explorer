@@ -816,19 +816,13 @@ export default function Chart2D({
       const xBucketCount = Math.min(maxXBuckets, Math.max(20, uniqueXCount * 10));
       const xBucketWidth = xRange / xBucketCount;
 
-      // Build X-axis labels from heatmapCategories, sampling evenly
+      // Build X-axis labels: map each grid column to its nearest time-bucket category
       const xBucketLabels: string[] = [];
       for (let b = 0; b < xBucketCount; b++) {
         const xVal = minX + (b + 0.5) * xBucketWidth;
-        // Find the closest point's category
-        let bestIdx = 0;
-        let bestDist = Infinity;
-        for (let i = 0; i < allXValues.length; i++) {
-          const d = Math.abs(allXValues[i] - xVal);
-          if (d < bestDist) { bestDist = d; bestIdx = i; }
-        }
-        const cat = heatmapCategories[bestIdx] ?? "";
-        xBucketLabels.push(cat.length > 10 ? cat.slice(0, 10) : cat);
+        const bucketIdx = Math.round(xVal);
+        const clampedIdx = Math.max(0, Math.min(heatmapCategories.length - 1, bucketIdx));
+        xBucketLabels.push(heatmapCategories[clampedIdx] ?? "");
       }
 
       // 2D Gaussian KDE — full-grid X reach so every tower influences every cell
