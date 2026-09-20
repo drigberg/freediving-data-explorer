@@ -857,10 +857,19 @@ export default function Chart2D({
       }
 
       const heatData: [number, number, number][] = [];
+      let maxRaw = 0;
+      for (let x = 0; x < xBucketCount; x++) {
+        for (let y = 0; y < numYBuckets; y++) {
+          const v = grid[x][y];
+          if (v > maxRaw) maxRaw = v;
+        }
+      }
+      // Apply gentle power easing to compress low values upward
+      const easedMax = Math.pow(maxRaw || 1, 0.75);
       let maxCount = 0;
       for (let x = 0; x < xBucketCount; x++) {
         for (let y = 0; y < numYBuckets; y++) {
-          const v = Math.round(grid[x][y] * 100) / 100;
+          const v = Math.round((Math.pow(grid[x][y], 0.75) / easedMax) * 1000) / 1000;
           heatData.push([x, y, v]);
           if (v > maxCount) maxCount = v;
         }
@@ -917,16 +926,16 @@ export default function Chart2D({
           show: false,
           inRange: {
             color: [
-              "#0a0a2e",
-              "#1a237e",
-              "#1565c0",
-              "#42a5f5",
-              "#b3e5fc",
-              "#fff9c4",
-              "#ffcc02",
-              "#ff8f00",
-              "#e65100",
-              "#b71c1c",
+              "#050d1a",
+              "#0a1a3a",
+              "#0f2b5e",
+              "#1a4a8a",
+              "#2568b8",
+              "#3a8ae0",
+              "#58a6ff",
+              "#8cc5ff",
+              "#c0dfff",
+              "#f0f6fc",
             ],
           },
         },
@@ -936,8 +945,7 @@ export default function Chart2D({
             data: heatData,
             label: { show: false },
             itemStyle: {
-              borderColor: "rgba(13, 17, 23, 0.6)",
-              borderWidth: 1,
+              borderWidth: 0,
             },
           },
         ],
