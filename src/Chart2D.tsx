@@ -782,7 +782,7 @@ export default function Chart2D({
         };
       }
 
-      // Density heatmap: 2D kernel density estimation over the interpolated points
+      // Density heatmap: 2D KDE directly on raw dive data (no interpolation needed)
       const numYBuckets = 80;
       const maxXBuckets = 200;
       const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
@@ -800,12 +800,13 @@ export default function Chart2D({
         );
       }
 
-      const totalPoints = series[0]?.data.length ?? 0;
+      // X values are integer bucket indices; build grid based on unique bucket count
       const allXValues = series[0]?.data.map(([x]) => x) ?? [];
       const minX = allXValues.length > 0 ? Math.min(...allXValues) : 0;
       const maxX = allXValues.length > 0 ? Math.max(...allXValues) : 1;
       const xRange = maxX - minX || 1;
-      const xBucketCount = Math.min(maxXBuckets, Math.max(1, totalPoints));
+      const uniqueXCount = new Set(allXValues.map((x) => Math.round(x))).size;
+      const xBucketCount = Math.min(maxXBuckets, Math.max(20, uniqueXCount * 10));
       const xBucketWidth = xRange / xBucketCount;
 
       // Build X-axis labels from heatmapCategories, sampling evenly
@@ -823,9 +824,10 @@ export default function Chart2D({
         xBucketLabels.push(cat.length > 10 ? cat.slice(0, 10) : cat);
       }
 
-      // Accumulate density with 2D Gaussian kernel (spreads in both X and Y)
-      const yRadius = Math.max(2, Math.round(numYBuckets * 0.06));
-      const xRadius = Math.max(2, Math.round(xBucketCount * 0.02));
+      // 2D Gaussian KDE — X radius spans the full inter-bucket distance for smooth flow
+      const columnsPerBucket = Math.max(1, Math.round(xBucketCount / Math.max(1, uniqueXCount)));
+      const xRadius = Math.max(4, columnsPerBucket);
+      const yRadius = Math.max(3, Math.round(numYBuckets * 0.08));
       const grid = Array.from({ length: xBucketCount }, () =>
         new Float64Array(numYBuckets),
       );

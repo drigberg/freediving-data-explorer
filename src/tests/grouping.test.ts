@@ -552,7 +552,7 @@ describe("processData – heatmap view (density)", () => {
     expect(result.heatmapDisplayMode).toBe("heatmap");
   });
 
-  it("interpolates to at least 20k data points", () => {
+  it("passes raw dive points (no interpolation — KDE handles smoothing)", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "timeline",
@@ -561,7 +561,7 @@ describe("processData – heatmap view (density)", () => {
       heatmapDisplayMode: "heatmap",
     };
     const result = processData(data, cfg);
-    expect(result.series[0].data.length).toBeGreaterThanOrEqual(20_000);
+    expect(result.series[0].data.length).toBe(4);
   });
 });
 

@@ -762,33 +762,6 @@ function processTimelineData(
   };
 }
 
-const HEATMAP_MIN_POINTS = 20_000;
-
-function interpolateHeatmapPoints(
-  points: [number, number][],
-  minCount: number,
-): [number, number][] {
-  if (points.length === 0 || points.length >= minCount) return points;
-  if (points.length === 1) return points;
-
-  // Each pass doubles the number of points (inserting midpoints between every pair).
-  let result = points;
-  while (result.length < minCount) {
-    const next: [number, number][] = [result[0]];
-    for (let i = 1; i < result.length; i++) {
-      const [x0, y0] = result[i - 1];
-      const [x1, y1] = result[i];
-      next.push([
-        (x0 + x1) / 2,
-        Math.round(((y0 + y1) / 2) * 10) / 10,
-      ]);
-      next.push(result[i]);
-    }
-    result = next;
-  }
-  return result;
-}
-
 function processHeatmapData(
   data: DiveData,
   config: GroupingConfig,
@@ -855,32 +828,17 @@ function processHeatmapData(
     diveValues[i],
   ]);
 
-  const shouldInterpolate = isHeatmap;
-  const interpolated = shouldInterpolate
-    ? interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS)
-    : rawPoints;
-
-  // For interpolated points, map fractional x back to categories
-  if (shouldInterpolate) {
-    const interpCategories: string[] = interpolated.map(([x]) => {
-      const lo = Math.floor(x);
-      const hi = Math.ceil(x);
-      if (lo === hi || hi >= categories.length) return categories[lo] ?? "";
-      const frac = x - lo;
-      return frac < 0.5 ? categories[lo] : categories[hi];
-    });
-    // Keep original X values so Chart2D can map them to the density grid
-    const points: [number, number][] = interpolated.map(([x, y]) => [x, y]);
-
+  // For heatmap density, pass raw points directly — Chart2D's KDE kernel handles smoothing
+  if (isHeatmap) {
     return {
       chartMode: "heatmap",
       heatmapMetric: metric,
       heatmapDisplayMode: "heatmap",
-      heatmapCategories: interpCategories,
+      heatmapCategories: categories,
       series: [
         {
           label: "All dives",
-          data: points,
+          data: rawPoints,
           primaryDiveIndex: data.seriesNames.length - 1,
           diveIndices: data.seriesNames.map((_, i) => i),
           color: undefined,
@@ -889,7 +847,7 @@ function processHeatmapData(
     };
   }
 
-  // Non-interpolated: use bucket indices directly as data points
+  // Non-interpolated scatter for multiPoint
   const series: ProcessedSeries[] = [
     {
       label: "All dives",
