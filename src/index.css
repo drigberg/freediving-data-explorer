@@ -474,19 +474,19 @@ body,
     color: rgba(247, 120, 186, 0.6);
 }
 
-.filter-chips button.discipline-safety-dynb:not(.active) {
+.filter-chips button.discipline-safety-cwtb:not(.active) {
     color: rgba(227, 179, 65, 0.4);
     border-color: rgba(227, 179, 65, 0.12);
     background: rgba(255, 255, 255, 0.03);
 }
 
-.filter-chips button.discipline-safety-dynb.active {
+.filter-chips button.discipline-safety-cwtb.active {
     background: rgba(227, 179, 65, 0.15);
     border-color: rgba(227, 179, 65, 0.45);
     color: #e3b341;
 }
 
-.filter-chips button.discipline-safety-dynb:hover:not(.active) {
+.filter-chips button.discipline-safety-cwtb:hover:not(.active) {
     background: rgba(227, 179, 65, 0.06);
     border-color: rgba(227, 179, 65, 0.2);
     color: rgba(227, 179, 65, 0.6);
@@ -1317,12 +1317,12 @@ body,
     background: rgba(247, 120, 186, 0.15);
 }
 
-.dive-discipline.safety-dynb-discipline,
-.dive-detail-item.safety-dynb-discipline {
+.dive-discipline.safety-cwtb-discipline,
+.dive-detail-item.safety-cwtb-discipline {
     color: #e3b341;
 }
 
-.dive-discipline.safety-dynb-discipline {
+.dive-discipline.safety-cwtb-discipline {
     background: rgba(227, 179, 65, 0.15);
 }
 
@@ -1376,12 +1376,12 @@ body,
     border-color: #f778ba;
 }
 
-.discipline-options .tag-option.safety-dynb-option {
+.discipline-options .tag-option.safety-cwtb-option {
     color: #e3b341;
     border-color: rgba(227, 179, 65, 0.4);
 }
 
-.discipline-options .tag-option.safety-dynb-option:hover {
+.discipline-options .tag-option.safety-cwtb-option:hover {
     background: rgba(227, 179, 65, 0.12);
     border-color: #e3b341;
 }

@@ -1,4 +1,4 @@
-import { SAFETY_DYNB_DISCIPLINE } from "./disciplines";
+import { SAFETY_CWTB_DISCIPLINE } from "./disciplines";
 import type { DiveData, ExposureSuit, ProfilePoint } from "./parseData";
 import {
   parseUddfString,
@@ -113,7 +113,7 @@ function migrateLegacyTags(store: DiveStore): DiveStore {
       } else if (tag.name.startsWith("Safety:") && !dive.discipline) {
         const value = tag.name.replace(/^Safety:\s*/, "");
         if (value === "Yes") {
-          dives[idx] = { ...dive, discipline: SAFETY_DYNB_DISCIPLINE };
+          dives[idx] = { ...dive, discipline: SAFETY_CWTB_DISCIPLINE };
         }
       } else if (
         tag.name.startsWith("Exposure Suit:") &&
@@ -216,9 +216,20 @@ function migrateSafetyProperty(store: DiveStore): DiveStore {
       safety?: boolean;
     };
     if (safety) {
-      return { ...rest, discipline: SAFETY_DYNB_DISCIPLINE };
+      return { ...rest, discipline: SAFETY_CWTB_DISCIPLINE };
     }
     return rest;
+  });
+  return changed ? { ...store, dives } : store;
+}
+
+/** Migrates old "Safety (DYNB)" discipline to "Safety (CWTB)". */
+function migrateDynbToCwtb(store: DiveStore): DiveStore {
+  let changed = false;
+  const dives = store.dives.map((d) => {
+    if (d.discipline !== "Safety (DYNB)") return d;
+    changed = true;
+    return { ...d, discipline: SAFETY_CWTB_DISCIPLINE };
   });
   return changed ? { ...store, dives } : store;
 }
@@ -538,7 +549,9 @@ export function prepareStore(store: DiveStore): {
 } {
   const { store: trimmed, changed: profilesTrimmed } = normalizeDiveProfiles(
     migrateTopLevelTagsToDives(
-      migrateSafetyProperty(migrateLegacyTags(migrateToNewDiveFormat(store))),
+      migrateDynbToCwtb(
+        migrateSafetyProperty(migrateLegacyTags(migrateToNewDiveFormat(store))),
+      ),
     ),
   );
   return { store: trimmed, profilesTrimmed };

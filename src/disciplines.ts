@@ -1,4 +1,4 @@
-export const SAFETY_DYNB_DISCIPLINE = "Safety (CWTB)";
+export const SAFETY_CWTB_DISCIPLINE = "Safety (CWTB)";
 
 export const DISCIPLINES = [
   "Free Immersion",
@@ -6,7 +6,7 @@ export const DISCIPLINES = [
   "Bi-Fins",
   "Mono-Fin",
   "Variable Weight",
-  SAFETY_DYNB_DISCIPLINE,
+  SAFETY_CWTB_DISCIPLINE,
 ] as const;
 
 export type Discipline = (typeof DISCIPLINES)[number];
@@ -17,7 +17,7 @@ export const DISCIPLINE_ABBREV: Record<string, string> = {
   "Bi-Fins": "CWTB",
   "Mono-Fin": "CWT",
   "Variable Weight": "VWT",
-  [SAFETY_DYNB_DISCIPLINE]: "SAFETY",
+  [SAFETY_CWTB_DISCIPLINE]: "SAFETY",
 };
 
 const DISCIPLINE_CSS_SLUG: Record<string, string> = {
@@ -26,7 +26,7 @@ const DISCIPLINE_CSS_SLUG: Record<string, string> = {
   "Bi-Fins": "cwtb",
   "Mono-Fin": "cwt",
   "Variable Weight": "vwt",
-  [SAFETY_DYNB_DISCIPLINE]: "safety-dynb",
+  [SAFETY_CWTB_DISCIPLINE]: "safety-cwtb",
 };
 
 export const DISCIPLINE_COLORS: Record<string, string> = {
@@ -35,7 +35,7 @@ export const DISCIPLINE_COLORS: Record<string, string> = {
   "Bi-Fins": "#58a6ff",
   "Mono-Fin": "#56d4dd",
   "Variable Weight": "#f778ba",
-  [SAFETY_DYNB_DISCIPLINE]: "#e3b341",
+  [SAFETY_CWTB_DISCIPLINE]: "#e3b341",
 };
 
 export const UNKNOWN_DISCIPLINE_COLOR = "#8b949e";
@@ -49,40 +49,40 @@ export function disciplineAbbrev(discipline: string): string {
   return DISCIPLINE_ABBREV[discipline] ?? discipline;
 }
 
-export function isSafetyDynbDiscipline(discipline: string): boolean {
-  return discipline === SAFETY_DYNB_DISCIPLINE;
+export function isSafetyCwtbDiscipline(discipline: string): boolean {
+  return discipline === SAFETY_CWTB_DISCIPLINE;
 }
 
 export function disciplineTagClass(discipline: string): string {
   const slug = DISCIPLINE_CSS_SLUG[discipline];
   if (!slug) return "dive-discipline";
-  if (slug === "safety-dynb") return "dive-discipline safety-dynb-discipline";
+  if (slug === "safety-cwtb") return "dive-discipline safety-cwtb-discipline";
   return `dive-discipline discipline-${slug}`;
 }
 
 export function disciplineDetailClass(discipline: string): string {
   const slug = DISCIPLINE_CSS_SLUG[discipline];
   if (!slug) return "dive-detail-item";
-  if (slug === "safety-dynb") return "dive-detail-item safety-dynb-discipline";
+  if (slug === "safety-cwtb") return "dive-detail-item safety-cwtb-discipline";
   return `dive-detail-item discipline-${slug}`;
 }
 
 export function disciplineOptionClass(discipline: string): string {
   const slug = DISCIPLINE_CSS_SLUG[discipline];
   if (!slug) return "tag-option";
-  if (slug === "safety-dynb") return "tag-option safety-dynb-option";
+  if (slug === "safety-cwtb") return "tag-option safety-cwtb-option";
   return `tag-option discipline-${slug}`;
 }
 
 export function disciplineFilterChipClass(discipline: string): string {
   const slug = DISCIPLINE_CSS_SLUG[discipline];
   if (!slug) return "";
-  if (slug === "safety-dynb") return "discipline-safety-dynb";
+  if (slug === "safety-cwtb") return "discipline-safety-cwtb";
   return `discipline-${slug}`;
 }
 
 export function sortDisciplinesForFilter(disciplines: string[]): string[] {
-  const other = disciplines.filter((d) => !isSafetyDynbDiscipline(d));
-  const safety = disciplines.filter((d) => isSafetyDynbDiscipline(d));
+  const other = disciplines.filter((d) => !isSafetyCwtbDiscipline(d));
+  const safety = disciplines.filter((d) => isSafetyCwtbDiscipline(d));
   return [...other, ...safety];
 }

@@ -1,4 +1,4 @@
-import { getDisciplineColor, isSafetyDynbDiscipline } from "./disciplines";
+import { getDisciplineColor, isSafetyCwtbDiscipline } from "./disciplines";
 import {
   defaultDiveFilters,
   diveFiltersEqual,
@@ -132,7 +132,7 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       heatmapDisplayMode: "scatter",
     },
     filters: (disciplines) => ({
-      disciplines: disciplines.filter((d) => !isSafetyDynbDiscipline(d)),
+      disciplines: disciplines.filter((d) => !isSafetyCwtbDiscipline(d)),
     }),
   },
   {
