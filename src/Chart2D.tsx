@@ -801,32 +801,49 @@ export default function Chart2D({
       }
 
       const totalPoints = series[0]?.data.length ?? 0;
-      const xBucketSize = Math.max(1, Math.ceil(totalPoints / maxXBuckets));
-      const xBucketCount = Math.ceil(totalPoints / xBucketSize);
+      const allXValues = series[0]?.data.map(([x]) => x) ?? [];
+      const minX = allXValues.length > 0 ? Math.min(...allXValues) : 0;
+      const maxX = allXValues.length > 0 ? Math.max(...allXValues) : 1;
+      const xRange = maxX - minX || 1;
+      const xBucketCount = Math.min(maxXBuckets, Math.max(1, totalPoints));
+      const xBucketWidth = xRange / xBucketCount;
+
+      // Build X-axis labels from heatmapCategories, sampling evenly
       const xBucketLabels: string[] = [];
       for (let b = 0; b < xBucketCount; b++) {
-        const startIdx = b * xBucketSize;
-        const cat = heatmapCategories[startIdx];
-        xBucketLabels.push(cat.slice(0, 10));
+        const xVal = minX + (b + 0.5) * xBucketWidth;
+        // Find the closest point's category
+        let bestIdx = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < allXValues.length; i++) {
+          const d = Math.abs(allXValues[i] - xVal);
+          if (d < bestDist) { bestDist = d; bestIdx = i; }
+        }
+        const cat = heatmapCategories[bestIdx] ?? "";
+        xBucketLabels.push(cat.length > 10 ? cat.slice(0, 10) : cat);
       }
 
-      // Accumulate density with a Gaussian-like Y spread (radius in bucket units)
+      // Accumulate density with 2D Gaussian kernel (spreads in both X and Y)
       const yRadius = Math.max(2, Math.round(numYBuckets * 0.06));
+      const xRadius = Math.max(2, Math.round(xBucketCount * 0.02));
       const grid = Array.from({ length: xBucketCount }, () =>
         new Float64Array(numYBuckets),
       );
-      for (const [catIdx, val] of series[0]?.data ?? []) {
-        const xBucket = Math.min(
-          Math.floor(catIdx / xBucketSize),
-          xBucketCount - 1,
-        );
+      for (const [xVal, val] of series[0]?.data ?? []) {
+        const xCenter = (xVal - minX) / xBucketWidth;
+        const xLo = Math.max(0, Math.floor(xCenter - xRadius));
+        const xHi = Math.min(xBucketCount - 1, Math.ceil(xCenter + xRadius));
         const yCenter = (val - minVal) / bucketSize;
         const yLo = Math.max(0, Math.floor(yCenter - yRadius));
         const yHi = Math.min(numYBuckets - 1, Math.ceil(yCenter + yRadius));
-        for (let y = yLo; y <= yHi; y++) {
-          const dist = Math.abs(y - yCenter) / yRadius;
-          const weight = Math.exp(-3 * dist * dist); // Gaussian falloff
-          grid[xBucket][y] += weight;
+        for (let x = xLo; x <= xHi; x++) {
+          const xDist = Math.abs(x - xCenter) / xRadius;
+          const xWeight = Math.exp(-3 * xDist * xDist);
+          for (let y = yLo; y <= yHi; y++) {
+            const yDist = Math.abs(y - yCenter) / yRadius;
+            const weight = xWeight * Math.exp(-3 * yDist * yDist);
+            grid[x][y] += weight;
+          }
         }
       }
 

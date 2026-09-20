@@ -869,7 +869,8 @@ function processHeatmapData(
       const frac = x - lo;
       return frac < 0.5 ? categories[lo] : categories[hi];
     });
-    const points: [number, number][] = interpolated.map(([, y], idx) => [idx, y]);
+    // Keep original X values so Chart2D can map them to the density grid
+    const points: [number, number][] = interpolated.map(([x, y]) => [x, y]);
 
     return {
       chartMode: "heatmap",
