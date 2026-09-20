@@ -752,23 +752,64 @@ function processTimelineData(
   };
 }
 
+const HEATMAP_MIN_POINTS = 20_000;
+
+function interpolateHeatmapPoints(
+  points: [number, number][],
+  minCount: number,
+): [number, number][] {
+  if (points.length === 0 || points.length >= minCount) return points;
+  if (points.length === 1) return points;
+
+  // Each pass doubles the number of points (inserting midpoints between every pair).
+  let result = points;
+  while (result.length < minCount) {
+    const next: [number, number][] = [result[0]];
+    for (let i = 1; i < result.length; i++) {
+      const [x0, y0] = result[i - 1];
+      const [x1, y1] = result[i];
+      next.push([
+        (x0 + x1) / 2,
+        Math.round(((y0 + y1) / 2) * 10) / 10,
+      ]);
+      next.push(result[i]);
+    }
+    result = next;
+  }
+  return result;
+}
+
 function processHeatmapData(
   data: DiveData,
   config: GroupingConfig,
 ): ProcessedData {
   const metric = config.heatmapMetric;
-  const categories: string[] = [];
+  const rawCategories: string[] = [];
 
-  const points: [number, number][] = [];
+  const rawPoints: [number, number][] = [];
   for (let i = 0; i < data.seriesNames.length; i++) {
     const profile = data.seriesData[i];
     const value =
       metric === "depth"
         ? Math.abs(getMaxDepth(profile))
         : getDuration(profile);
-    categories.push(data.seriesNames[i]);
-    points.push([i, Math.round(value * 10) / 10]);
+    rawCategories.push(data.seriesNames[i]);
+    rawPoints.push([i, Math.round(value * 10) / 10]);
   }
+
+  const interpolated = interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS);
+
+  // Build categories for interpolated points
+  const categories: string[] = interpolated.map(([x]) => {
+    const lo = Math.floor(x);
+    const hi = Math.ceil(x);
+    if (lo === hi || hi >= rawCategories.length) return rawCategories[lo] ?? "";
+    const frac = x - lo;
+    return frac < 0.5 ? rawCategories[lo] : rawCategories[hi];
+  });
+
+  // Re-index interpolated points sequentially
+  const points: [number, number][] = interpolated.map(([, y], idx) => [idx, y]);
 
   const series: ProcessedSeries[] = [
     {

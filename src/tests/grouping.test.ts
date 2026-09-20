@@ -455,7 +455,7 @@ describe("processData – heatmap view (scatter)", () => {
     expect(result.heatmapDisplayMode).toBe("scatter");
   });
 
-  it("has one category per dive", () => {
+  it("interpolates to at least 20k data points", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "heatmap",
@@ -463,12 +463,11 @@ describe("processData – heatmap view (scatter)", () => {
       heatmapDisplayMode: "scatter",
     };
     const result = processData(data, cfg);
-    expect(result.heatmapCategories).toHaveLength(3);
-    expect(result.heatmapCategories![0]).toBe("2026-01-10 #1");
-    expect(result.heatmapCategories![2]).toBe("2026-02-15 #3");
+    expect(result.series[0].data.length).toBeGreaterThanOrEqual(20_000);
+    expect(result.heatmapCategories!.length).toBe(result.series[0].data.length);
   });
 
-  it("produces a single series containing all dives", () => {
+  it("produces a single series containing all original dive indices", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "heatmap",
@@ -481,7 +480,7 @@ describe("processData – heatmap view (scatter)", () => {
     expect(result.series[0].label).toBe("All dives");
   });
 
-  it("data points contain depth values", () => {
+  it("first and last data points match original dive values (depth)", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "heatmap",
@@ -490,14 +489,11 @@ describe("processData – heatmap view (scatter)", () => {
     };
     const result = processData(data, cfg);
     const points = result.series[0].data;
-    expect(points).toHaveLength(3);
-    expect(points[0][0]).toBe(0);
     expect(points[0][1]).toBe(20);
-    expect(points[1][1]).toBe(30);
-    expect(points[2][1]).toBe(25);
+    expect(points[points.length - 1][1]).toBe(25);
   });
 
-  it("data points contain duration values when metric is duration", () => {
+  it("first and last data points match original dive values (duration)", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "heatmap",
@@ -506,10 +502,25 @@ describe("processData – heatmap view (scatter)", () => {
     };
     const result = processData(data, cfg);
     const points = result.series[0].data;
-    expect(points).toHaveLength(3);
     expect(points[0][1]).toBe(60);
-    expect(points[1][1]).toBe(80);
-    expect(points[2][1]).toBe(100);
+    expect(points[points.length - 1][1]).toBe(100);
+  });
+
+  it("interpolated values stay within the range of neighboring dives", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    const values = result.series[0].data.map(([, v]) => v);
+    const min = Math.min(20, 25, 30);
+    const max = Math.max(20, 25, 30);
+    for (const v of values) {
+      expect(v).toBeGreaterThanOrEqual(min);
+      expect(v).toBeLessThanOrEqual(max);
+    }
   });
 });
 
@@ -533,7 +544,7 @@ describe("processData – heatmap view (density)", () => {
     expect(result.heatmapDisplayMode).toBe("heatmap");
   });
 
-  it("still has one data point per dive in the series", () => {
+  it("interpolates to at least 20k data points", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "heatmap",
@@ -541,7 +552,7 @@ describe("processData – heatmap view (density)", () => {
       heatmapDisplayMode: "heatmap",
     };
     const result = processData(data, cfg);
-    expect(result.series[0].data).toHaveLength(4);
+    expect(result.series[0].data.length).toBeGreaterThanOrEqual(20_000);
   });
 });
 

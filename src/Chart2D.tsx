@@ -769,11 +769,13 @@ export default function Chart2D({
         };
       }
 
-      // Density heatmap: bucket dive indices on x-axis, value buckets on y-axis
-      const numYBuckets = 10;
+      // Density heatmap: 2D kernel density estimation over the interpolated points
+      const numYBuckets = 80;
+      const maxXBuckets = 200;
       const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
       const maxVal = allValues.length > 0 ? Math.max(...allValues) : 1;
-      const bucketSize = (maxVal - minVal) / numYBuckets || 1;
+      const valRange = maxVal - minVal || 1;
+      const bucketSize = valRange / numYBuckets;
       const yLabels: string[] = [];
       for (let b = 0; b < numYBuckets; b++) {
         const lo = minVal + b * bucketSize;
@@ -785,40 +787,43 @@ export default function Chart2D({
         );
       }
 
-      // Group x-axis into date-based buckets (≤30)
-      const maxXBuckets = 30;
-      const xBucketSize = Math.max(
-        1,
-        Math.ceil(heatmapCategories.length / maxXBuckets),
-      );
+      const totalPoints = series[0]?.data.length ?? 0;
+      const xBucketSize = Math.max(1, Math.ceil(totalPoints / maxXBuckets));
+      const xBucketCount = Math.ceil(totalPoints / xBucketSize);
       const xBucketLabels: string[] = [];
-      const xBucketCount = Math.ceil(heatmapCategories.length / xBucketSize);
       for (let b = 0; b < xBucketCount; b++) {
         const startIdx = b * xBucketSize;
         const cat = heatmapCategories[startIdx];
         xBucketLabels.push(cat.slice(0, 10));
       }
 
-      const heatData: [number, number, number][] = [];
+      // Accumulate density with a Gaussian-like Y spread (radius in bucket units)
+      const yRadius = Math.max(2, Math.round(numYBuckets * 0.06));
       const grid = Array.from({ length: xBucketCount }, () =>
-        new Array<number>(numYBuckets).fill(0),
+        new Float64Array(numYBuckets),
       );
       for (const [catIdx, val] of series[0]?.data ?? []) {
         const xBucket = Math.min(
           Math.floor(catIdx / xBucketSize),
           xBucketCount - 1,
         );
-        const yBucket = Math.min(
-          Math.floor((val - minVal) / bucketSize),
-          numYBuckets - 1,
-        );
-        grid[xBucket][yBucket]++;
+        const yCenter = (val - minVal) / bucketSize;
+        const yLo = Math.max(0, Math.floor(yCenter - yRadius));
+        const yHi = Math.min(numYBuckets - 1, Math.ceil(yCenter + yRadius));
+        for (let y = yLo; y <= yHi; y++) {
+          const dist = Math.abs(y - yCenter) / yRadius;
+          const weight = Math.exp(-3 * dist * dist); // Gaussian falloff
+          grid[xBucket][y] += weight;
+        }
       }
+
+      const heatData: [number, number, number][] = [];
       let maxCount = 0;
       for (let x = 0; x < xBucketCount; x++) {
         for (let y = 0; y < numYBuckets; y++) {
-          heatData.push([x, y, grid[x][y]]);
-          if (grid[x][y] > maxCount) maxCount = grid[x][y];
+          const v = Math.round(grid[x][y] * 100) / 100;
+          heatData.push([x, y, v]);
+          if (v > maxCount) maxCount = v;
         }
       }
 
@@ -852,7 +857,7 @@ export default function Chart2D({
           axisLabel: {
             color: "#8b949e",
             rotate: xBucketLabels.length > 12 ? 45 : 0,
-            interval: 0,
+            interval: Math.max(0, Math.floor(xBucketLabels.length / 12)),
           },
           splitLine: { show: false },
         },
@@ -864,7 +869,7 @@ export default function Chart2D({
           nameGap: isMobile ? 54 : 72,
           nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
           axisLine: { lineStyle: { color: "#30363d" } },
-          axisLabel: { color: "#8b949e" },
+          axisLabel: { color: "#8b949e", interval: Math.max(0, Math.floor(numYBuckets / 10)) },
           splitLine: { show: false },
         },
         visualMap: {
