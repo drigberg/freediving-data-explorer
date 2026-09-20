@@ -802,9 +802,13 @@ export default function Chart2D({
 
       // X values are integer bucket indices; build grid based on unique bucket count
       const allXValues = series[0]?.data.map(([x]) => x) ?? [];
-      const minX = allXValues.length > 0 ? Math.min(...allXValues) : 0;
-      const maxX = allXValues.length > 0 ? Math.max(...allXValues) : 1;
-      const xRange = maxX - minX || 1;
+      const rawMinX = allXValues.length > 0 ? Math.min(...allXValues) : 0;
+      const rawMaxX = allXValues.length > 0 ? Math.max(...allXValues) : 1;
+      const rawRange = rawMaxX - rawMinX || 1;
+      const padding = rawRange * 0.05;
+      const minX = rawMinX - padding;
+      const maxX = rawMaxX + padding;
+      const xRange = maxX - minX;
       const uniqueXCount = new Set(allXValues.map((x) => Math.round(x))).size;
       const xBucketCount = Math.min(maxXBuckets, Math.max(20, uniqueXCount * 10));
       const xBucketWidth = xRange / xBucketCount;
@@ -824,9 +828,9 @@ export default function Chart2D({
         xBucketLabels.push(cat.length > 10 ? cat.slice(0, 10) : cat);
       }
 
-      // 2D Gaussian KDE — X radius spans the full inter-bucket distance for smooth flow
+      // 2D Gaussian KDE — full-grid X reach so every tower influences every cell
       const columnsPerBucket = Math.max(1, Math.round(xBucketCount / Math.max(1, uniqueXCount)));
-      const xRadius = Math.max(4, columnsPerBucket);
+      const xRadius = Math.max(4, xBucketCount);
       const yRadius = Math.max(3, Math.round(numYBuckets * 0.08));
       const grid = Array.from({ length: xBucketCount }, () =>
         new Float64Array(numYBuckets),
@@ -839,7 +843,7 @@ export default function Chart2D({
         const yLo = Math.max(0, Math.floor(yCenter - yRadius));
         const yHi = Math.min(numYBuckets - 1, Math.ceil(yCenter + yRadius));
         for (let x = xLo; x <= xHi; x++) {
-          const xDist = Math.abs(x - xCenter) / xRadius;
+          const xDist = Math.abs(x - xCenter) / columnsPerBucket;
           const xWeight = Math.exp(-3 * xDist * xDist);
           for (let y = yLo; y <= yHi; y++) {
             const yDist = Math.abs(y - yCenter) / yRadius;
