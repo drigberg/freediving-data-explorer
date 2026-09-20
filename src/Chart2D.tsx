@@ -832,7 +832,11 @@ export default function Chart2D({
       const grid = Array.from({ length: xBucketCount }, () =>
         new Float64Array(numYBuckets),
       );
-      for (const [xVal, val] of series[0]?.data ?? []) {
+      const pointWeights = series[0]?.weights;
+      const dataPoints = series[0]?.data ?? [];
+      for (let pi = 0; pi < dataPoints.length; pi++) {
+        const [xVal, val] = dataPoints[pi];
+        const pointWeight = pointWeights ? pointWeights[pi] : 1;
         const xCenter = (xVal - minX) / xBucketWidth;
         const xLo = Math.max(0, Math.floor(xCenter - xRadius));
         const xHi = Math.min(xBucketCount - 1, Math.ceil(xCenter + xRadius));
@@ -844,7 +848,7 @@ export default function Chart2D({
           const xWeight = Math.exp(-3 * xDist * xDist);
           for (let y = yLo; y <= yHi; y++) {
             const yDist = Math.abs(y - yCenter) / yRadius;
-            const weight = xWeight * Math.exp(-3 * yDist * yDist);
+            const weight = pointWeight * xWeight * Math.exp(-3 * yDist * yDist);
             grid[x][y] += weight;
           }
         }
@@ -879,7 +883,8 @@ export default function Chart2D({
           textStyle: { color: "#e6edf3", fontSize: 12 },
           formatter: (params: any) => {
             const [xIdx, yIdx, count] = params.value ?? [0, 0, 0];
-            return `${xBucketLabels[xIdx] ?? ""}<br/>${yLabels[yIdx] ?? ""}<br/>Count: ${count}`;
+            const countLabel = heatmapMetric === "depthDuration" ? "Intensity" : "Count";
+            return `${xBucketLabels[xIdx] ?? ""}<br/>${yLabels[yIdx] ?? ""}<br/>${countLabel}: ${count}`;
           },
         },
         grid: {

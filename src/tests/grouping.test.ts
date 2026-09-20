@@ -8,6 +8,7 @@ import {
   resolvePresetFilters,
   GROUPING_PRESETS,
   type GroupingConfig,
+  computeTimeAtDepth,
 } from "../grouping";
 import { defaultDiveFilters } from "../filters";
 
@@ -650,5 +651,129 @@ describe("processData – heatmap with single dive", () => {
     expect(result.series[0].data).toHaveLength(1);
     expect(result.series[0].data[0]).toEqual([0, 15]);
     expect(result.heatmapCategories).toEqual(["Mar 2026"]);
+  });
+});
+
+// ── computeTimeAtDepth ──
+
+describe("computeTimeAtDepth", () => {
+  it("returns empty for a profile with fewer than 2 points", () => {
+    expect(computeTimeAtDepth([])).toEqual([]);
+    expect(computeTimeAtDepth([[0, 0]])).toEqual([]);
+  });
+
+  it("returns empty for a profile that never goes below 0.25m", () => {
+    const profile: ProfilePoint[] = [
+      [0, 0],
+      [5, -0.1],
+      [10, 0],
+    ];
+    expect(computeTimeAtDepth(profile)).toEqual([]);
+  });
+
+  it("computes time-at-depth for a simple triangular dive to 1m", () => {
+    // Descend from 0m to -1m over 10s, ascend from -1m to 0m over 10s
+    const profile: ProfilePoint[] = [
+      [0, 0],
+      [10, -1],
+      [20, 0],
+    ];
+    const result = computeTimeAtDepth(profile);
+    // 3 slices with non-zero time: 0.25m, 0.5m, 0.75m
+    // (1.0m slice has 0s because the dive only touches that depth instantaneously)
+    expect(result.length).toBe(3);
+    expect(result[0][0]).toBe(0.25);
+    expect(result[1][0]).toBe(0.5);
+    expect(result[2][0]).toBe(0.75);
+    // Time at 0.25m or deeper: both segments contribute
+    // Descent: 10s * (1.0 - 0.25) / 1.0 = 7.5s; Ascent: same = 7.5s; total = 15s
+    expect(result[0][1]).toBe(15);
+    // Time at 0.5m or deeper: 10s * 0.5/1.0 * 2 = 10s
+    expect(result[1][1]).toBe(10);
+  });
+
+  it("computes time-at-depth for a rectangular dive", () => {
+    // Instant descent to -2m, stay 10s, instant ascent
+    const profile: ProfilePoint[] = [
+      [0, 0],
+      [0, -2],
+      [10, -2],
+      [10, 0],
+    ];
+    const result = computeTimeAtDepth(profile);
+    // 8 slices (0.25 to 2.0m)
+    expect(result.length).toBe(8);
+    // All slices at ≤2.0m should have 10s (the flat bottom segment)
+    for (const [depth, seconds] of result) {
+      if (depth <= 2.0) {
+        expect(seconds).toBeGreaterThan(0);
+      }
+    }
+    // The flat segment at -2m: all slices from 0.25 to 2.0 get 10s
+    expect(result.find(([d]) => d === 0.5)?.[1]).toBe(10);
+    expect(result.find(([d]) => d === 1.0)?.[1]).toBe(10);
+    expect(result.find(([d]) => d === 1.5)?.[1]).toBe(10);
+    expect(result.find(([d]) => d === 2.0)?.[1]).toBe(10);
+  });
+});
+
+// ── processData – depthDuration metric ──
+
+describe("processData – depthDuration metric", () => {
+  const data = makeDiveData([
+    { date: "2026-01-10", num: 1, depth: 2, duration: 20 },
+    { date: "2026-01-10", num: 2, depth: 4, duration: 40 },
+  ]);
+
+  it("produces multiple weighted points per dive", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "timeline",
+      timelineVariant: "heatmap",
+      heatmapMetric: "depthDuration",
+    };
+    const result = processData(data, cfg);
+    expect(result.chartMode).toBe("heatmap");
+    expect(result.heatmapMetric).toBe("depthDuration");
+    // Each dive produces floor(maxDepth / 0.25) slices minus any zero-second ones
+    expect(result.series[0].data.length).toBeGreaterThan(2);
+    expect(result.series[0].weights).toBeDefined();
+    expect(result.series[0].weights!.length).toBe(result.series[0].data.length);
+  });
+
+  it("Y values are positive depth increments at 0.25m steps", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "timeline",
+      timelineVariant: "heatmap",
+      heatmapMetric: "depthDuration",
+    };
+    const result = processData(data, cfg);
+    const yValues = result.series[0].data.map(([, y]) => y);
+    for (const y of yValues) {
+      expect(y).toBeGreaterThan(0);
+      expect(y % 0.25).toBe(0);
+    }
+  });
+
+  it("weights represent seconds at each depth", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "timeline",
+      timelineVariant: "heatmap",
+      heatmapMetric: "depthDuration",
+    };
+    const result = processData(data, cfg);
+    const weights = result.series[0].weights!;
+    for (const w of weights) {
+      expect(w).toBeGreaterThan(0);
+    }
+    // Shallower slices should have more time than deeper ones
+    // Find a shallow and deep weight from the first dive
+    const firstDivePoints = result.series[0].data.filter(([x]) => x === 0);
+    const firstDiveWeights = weights.slice(0, firstDivePoints.length);
+    expect(firstDiveWeights[0]).toBeGreaterThanOrEqual(
+      firstDiveWeights[firstDiveWeights.length - 1],
+    );
   });
 });

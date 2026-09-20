@@ -25,7 +25,7 @@ export type RankCriterion = "longest" | "deepest";
 export type AggregationMode = "none" | "distance" | "duration";
 export type ChartViewMode = "diveProfile" | "timeline";
 export type TimelineVariant = "singlePoint" | "multiPoint" | "heatmap";
-export type HeatmapMetric = "depth" | "duration";
+export type HeatmapMetric = "depth" | "duration" | "depthDuration";
 export type HeatmapDisplayMode = "scatter" | "heatmap";
 
 export interface GroupingConfig {
@@ -59,6 +59,8 @@ export interface ProcessedSeries {
   diveIndices: number[];
   /** Discipline-based line/bar color when applicable. */
   color?: string;
+  /** Optional per-point weights for KDE (used by depthDuration metric). */
+  weights?: number[];
 }
 
 export interface ProcessedData {
@@ -283,6 +285,62 @@ function getDuration(points: ProfilePoint[]): number {
 function getMaxDepth(points: ProfilePoint[]): number {
   if (points.length === 0) return 0;
   return Math.min(...points.map(([, d]) => d));
+}
+
+const DEPTH_SLICE_GRANULARITY = 0.25;
+
+/**
+ * Compute cumulative time-at-depth for a dive profile at 0.25m granularity.
+ * For each depth slice D, returns the total seconds the dive spent at depth D or deeper.
+ * Depths in profiles are negative (below surface), so we work with absolute values.
+ * Returns [depth, seconds][] sorted ascending by depth, e.g. [[0.25, 45], [0.5, 43], ...].
+ */
+export function computeTimeAtDepth(
+  profile: ProfilePoint[],
+): [number, number][] {
+  if (profile.length < 2) return [];
+
+  const maxDepth = Math.abs(Math.min(...profile.map(([, d]) => d)));
+  if (maxDepth < DEPTH_SLICE_GRANULARITY) return [];
+
+  const sliceCount = Math.floor(maxDepth / DEPTH_SLICE_GRANULARITY);
+  const timeAtDepth = new Float64Array(sliceCount);
+
+  for (let i = 1; i < profile.length; i++) {
+    const [t0, d0] = profile[i - 1];
+    const [t1, d1] = profile[i];
+    const dt = t1 - t0;
+    if (dt <= 0) continue;
+
+    const absD0 = Math.abs(d0);
+    const absD1 = Math.abs(d1);
+    const segMinDepth = Math.min(absD0, absD1);
+    const segMaxDepth = Math.max(absD0, absD1);
+
+    for (let s = 0; s < sliceCount; s++) {
+      const threshold = (s + 1) * DEPTH_SLICE_GRANULARITY;
+      if (threshold > segMaxDepth) break;
+
+      if (threshold <= segMinDepth) {
+        timeAtDepth[s] += dt;
+      } else {
+        const depthRange = segMaxDepth - segMinDepth;
+        if (depthRange > 0) {
+          const fraction = (segMaxDepth - threshold) / depthRange;
+          timeAtDepth[s] += dt * fraction;
+        }
+      }
+    }
+  }
+
+  const result: [number, number][] = [];
+  for (let s = 0; s < sliceCount; s++) {
+    const seconds = Math.round(timeAtDepth[s] * 10) / 10;
+    if (seconds > 0) {
+      result.push([(s + 1) * DEPTH_SLICE_GRANULARITY, seconds]);
+    }
+  }
+  return result;
 }
 
 function dateIntervalKey(date: Date, unit: DateIntervalUnit): string {
@@ -772,9 +830,9 @@ function processHeatmapData(
 
   function diveValue(i: number): number {
     const profile = data.seriesData[i];
-    return metric === "depth"
-      ? Math.abs(getMaxDepth(profile))
-      : getDuration(profile);
+    return metric === "duration"
+      ? getDuration(profile)
+      : Math.abs(getMaxDepth(profile));
   }
 
   // Build per-dive values
@@ -830,6 +888,36 @@ function processHeatmapData(
 
   // For heatmap density, pass raw points directly — Chart2D's KDE kernel handles smoothing
   if (isHeatmap) {
+    // depthDuration: emit multiple weighted points per dive (one per 0.25m depth slice)
+    if (metric === "depthDuration") {
+      const points: [number, number][] = [];
+      const weights: number[] = [];
+      for (let i = 0; i < data.seriesNames.length; i++) {
+        const bucketX = diveToBucketX[i];
+        const slices = computeTimeAtDepth(data.seriesData[i]);
+        for (const [depth, seconds] of slices) {
+          points.push([bucketX, depth]);
+          weights.push(seconds);
+        }
+      }
+      return {
+        chartMode: "heatmap",
+        heatmapMetric: metric,
+        heatmapDisplayMode: "heatmap",
+        heatmapCategories: categories,
+        series: [
+          {
+            label: "All dives",
+            data: points,
+            weights,
+            primaryDiveIndex: data.seriesNames.length - 1,
+            diveIndices: data.seriesNames.map((_, i) => i),
+            color: undefined,
+          },
+        ],
+      };
+    }
+
     return {
       chartMode: "heatmap",
       heatmapMetric: metric,

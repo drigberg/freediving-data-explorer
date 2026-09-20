@@ -129,10 +129,18 @@ export default function GroupingControls({
         <div className="grouping-row">
           <span className="grouping-label">Metric</span>
           <SegmentButtons<HeatmapMetric>
-            options={["depth", "duration"]}
+            options={
+              config.timelineVariant === "heatmap"
+                ? ["depth", "duration", "depthDuration"]
+                : ["depth", "duration"]
+            }
             value={config.heatmapMetric}
             onChange={(heatmapMetric) => update({ heatmapMetric })}
-            labels={{ depth: "Depth", duration: "Duration" }}
+            labels={{
+              depth: "Depth",
+              duration: "Duration",
+              depthDuration: "Depth × Duration",
+            }}
           />
         </div>
       ) : null}
