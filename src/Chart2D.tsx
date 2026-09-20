@@ -875,8 +875,8 @@ export default function Chart2D({
           left: "center",
           bottom: 0,
           inRange: {
-            color: ["#0e1726", "#1f6feb", "#58a6ff", "#f0f6fc"],
-            opacity: [0, 0.7, 1, 1, 1, 1, 1],
+            color: ["#0e1726", "#1f6feb", "#58a6ff", "#a371f7", "#bc8cff", "#d2a8ff", "#f0f6fc"],
+            opacity: [0, 1, 1, 1, 1, 1, 1],
           },
           textStyle: { color: "#8b949e" },
         },
