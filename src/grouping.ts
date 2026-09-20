@@ -795,6 +795,7 @@ function processHeatmapData(
 ): ProcessedData {
   const metric = config.heatmapMetric;
   const isMultiPoint = config.timelineVariant === "multiPoint";
+  const isHeatmap = config.timelineVariant === "heatmap";
 
   function diveValue(i: number): number {
     const profile = data.seriesData[i];
@@ -803,18 +804,34 @@ function processHeatmapData(
       : getDuration(profile);
   }
 
-  // For multiPoint with grouping, produce one series per group with color coding
+  // Build per-dive values
+  const diveValues: number[] = data.seriesNames.map((_, i) =>
+    Math.round(diveValue(i) * 10) / 10,
+  );
+
+  // Always use dateIntervalUnit to bucket dives along X (same as single-point timeline)
+  const allIndices = data.seriesNames.map((_, i) => i);
+  const dateBuckets = collectDateIntervals(
+    data,
+    allIndices,
+    config.dateIntervalUnit,
+  );
+  const categories = dateBuckets.map((b) => b.key);
+
+  // Map each global dive index → bucket X position
+  const diveToBucketX = new Array<number>(data.seriesNames.length);
+  for (let bIdx = 0; bIdx < dateBuckets.length; bIdx++) {
+    for (const diveIdx of dateBuckets[bIdx].indices) {
+      diveToBucketX[diveIdx] = bIdx;
+    }
+  }
+
+  // For multiPoint with grouping, produce one series per group (color-coded)
   if (isMultiPoint && config.groupMode !== "none") {
     const groups = resolveGroups(data, config);
-    const categories = data.seriesNames.map((name) => name);
-    const points: [number, number][] = data.seriesNames.map((_, i) => [
-      i,
-      Math.round(diveValue(i) * 10) / 10,
-    ]);
-
     const series: ProcessedSeries[] = groups.map((group) => ({
       label: group.label,
-      data: group.indices.map((i) => points[i]),
+      data: group.indices.map((i) => [diveToBucketX[i], diveValues[i]] as [number, number]),
       primaryDiveIndex: Math.max(...group.indices),
       diveIndices: group.indices,
       color:
@@ -833,32 +850,49 @@ function processHeatmapData(
   }
 
   // Default: single series (for ungrouped multiPoint or heatmap density)
-  const rawCategories: string[] = [];
-  const rawPoints: [number, number][] = [];
-  for (let i = 0; i < data.seriesNames.length; i++) {
-    rawCategories.push(data.seriesNames[i]);
-    rawPoints.push([i, Math.round(diveValue(i) * 10) / 10]);
-  }
+  const rawPoints: [number, number][] = data.seriesNames.map((_, i) => [
+    diveToBucketX[i],
+    diveValues[i],
+  ]);
 
-  const shouldInterpolate = config.timelineVariant === "heatmap";
+  const shouldInterpolate = isHeatmap;
   const interpolated = shouldInterpolate
     ? interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS)
     : rawPoints;
 
-  const categories: string[] = interpolated.map(([x]) => {
-    const lo = Math.floor(x);
-    const hi = Math.ceil(x);
-    if (lo === hi || hi >= rawCategories.length) return rawCategories[lo] ?? "";
-    const frac = x - lo;
-    return frac < 0.5 ? rawCategories[lo] : rawCategories[hi];
-  });
+  // For interpolated points, map fractional x back to categories
+  if (shouldInterpolate) {
+    const interpCategories: string[] = interpolated.map(([x]) => {
+      const lo = Math.floor(x);
+      const hi = Math.ceil(x);
+      if (lo === hi || hi >= categories.length) return categories[lo] ?? "";
+      const frac = x - lo;
+      return frac < 0.5 ? categories[lo] : categories[hi];
+    });
+    const points: [number, number][] = interpolated.map(([, y], idx) => [idx, y]);
 
-  const points: [number, number][] = interpolated.map(([, y], idx) => [idx, y]);
+    return {
+      chartMode: "heatmap",
+      heatmapMetric: metric,
+      heatmapDisplayMode: "heatmap",
+      heatmapCategories: interpCategories,
+      series: [
+        {
+          label: "All dives",
+          data: points,
+          primaryDiveIndex: data.seriesNames.length - 1,
+          diveIndices: data.seriesNames.map((_, i) => i),
+          color: undefined,
+        },
+      ],
+    };
+  }
 
+  // Non-interpolated: use bucket indices directly as data points
   const series: ProcessedSeries[] = [
     {
       label: "All dives",
-      data: points,
+      data: rawPoints,
       primaryDiveIndex: data.seriesNames.length - 1,
       diveIndices: data.seriesNames.map((_, i) => i),
       color: undefined,
@@ -868,7 +902,7 @@ function processHeatmapData(
   return {
     chartMode: "heatmap",
     heatmapMetric: metric,
-    heatmapDisplayMode: config.timelineVariant === "heatmap" ? "heatmap" : "scatter",
+    heatmapDisplayMode: "scatter",
     heatmapCategories: categories,
     series,
   };

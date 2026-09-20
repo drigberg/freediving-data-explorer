@@ -461,12 +461,13 @@ describe("processData – heatmap view (scatter)", () => {
       ...defaultGroupingConfig(),
       viewMode: "timeline",
       timelineVariant: "multiPoint",
+      dateIntervalUnit: "day",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
     };
     const result = processData(data, cfg);
     expect(result.series[0].data.length).toBe(3);
-    expect(result.heatmapCategories!.length).toBe(3);
+    expect(result.heatmapCategories!.length).toBe(2);
   });
 
   it("produces a single series containing all original dive indices", () => {
@@ -648,6 +649,6 @@ describe("processData – heatmap with single dive", () => {
     const result = processData(data, cfg);
     expect(result.series[0].data).toHaveLength(1);
     expect(result.series[0].data[0]).toEqual([0, 15]);
-    expect(result.heatmapCategories).toEqual(["2026-03-01 #1"]);
+    expect(result.heatmapCategories).toEqual(["Mar 2026"]);
   });
 });
