@@ -717,20 +717,21 @@ export default function Chart2D({
             borderWidth: 1,
             textStyle: { color: "#e6edf3", fontSize: 12 },
             formatter: (params: any) => {
-              const idx = params.dataIndex ?? 0;
-              const label = heatmapCategories[idx] ?? "";
+              const catIdx = params.value?.[0] ?? 0;
+              const label = heatmapCategories[catIdx] ?? "";
               const val = params.value?.[1] ?? 0;
               const formatted =
                 heatmapMetric === "duration"
                   ? `${val.toFixed(1)} s`
                   : `${val.toFixed(1)} m`;
-              return `${label}<br/>${formatted}`;
+              const seriesName = series.length > 1 ? `<br/>${params.seriesName}` : "";
+              return `${label}<br/>${formatted}${seriesName}`;
             },
           },
           grid: {
             left: isMobile ? 44 : 60,
             right: isMobile ? 8 : 24,
-            top: isMobile ? 16 : 24,
+            top: series.length > 1 ? (isMobile ? 32 : 40) : (isMobile ? 16 : 24),
             bottom: isMobile ? 52 : 60,
           },
           xAxis: {
@@ -758,17 +759,25 @@ export default function Chart2D({
             axisLabel: { color: "#8b949e" },
             splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
           },
-          series: [
-            {
+          series: series.map((s, idx) => ({
               type: "scatter" as const,
-              data: series[0]?.data.map(([catIdx, val]) => [catIdx, val]) ?? [],
+              name: s.label,
+              data: s.data.map(([catIdx, val]) => [catIdx, val]),
               symbolSize: isMobile ? 6 : 8,
               itemStyle: {
-                color: series[0]?.color ?? getSeriesColor(0, 1),
+                color: s.color ?? getSeriesColor(idx, series.length),
                 opacity: 0.8,
               },
-            },
-          ],
+            })),
+          legend:
+            series.length > 1
+              ? {
+                  show: true,
+                  top: 0,
+                  textStyle: { color: "#e6edf3", fontSize: 11 },
+                  itemGap: 12,
+                }
+              : undefined,
           animation: false,
         };
       }
@@ -1461,7 +1470,6 @@ export default function Chart2D({
                   onGroupingConfigChange({
                     ...groupingConfig,
                     timelineVariant: "multiPoint",
-                    groupMode: "none",
                   })
                 }
               >

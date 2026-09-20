@@ -135,7 +135,9 @@ export default function GroupingControls({
             labels={{ depth: "Depth", duration: "Duration" }}
           />
         </div>
-      ) : (
+      ) : null}
+
+      {isMultiPointOrHeatmap && config.timelineVariant === "heatmap" ? null : (
       <div className="grouping-manual">
         <div className="grouping-row">
           <span className="grouping-label">Group by</span>

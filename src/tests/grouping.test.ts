@@ -570,7 +570,7 @@ describe("processData – heatmap ignores grouping/aggregation", () => {
     { date: "2026-01-10", num: 2, depth: 30, duration: 80, discipline: "FIM" },
   ]);
 
-  it("ignores groupMode and still produces one series", () => {
+  it("groups by discipline in multi-point mode", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "timeline",
@@ -579,6 +579,24 @@ describe("processData – heatmap ignores grouping/aggregation", () => {
       aggregationMode: "distance",
       heatmapMetric: "depth",
       heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    expect(result.chartMode).toBe("heatmap");
+    expect(result.series).toHaveLength(2);
+    expect(result.series[0].label).toBe("CWT");
+    expect(result.series[0].diveIndices).toEqual([0]);
+    expect(result.series[1].label).toBe("FIM");
+    expect(result.series[1].diveIndices).toEqual([1]);
+  });
+
+  it("ignores groupMode in heatmap variant and produces one series", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "timeline",
+      timelineVariant: "heatmap",
+      groupMode: "discipline",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "heatmap",
     };
     const result = processData(data, cfg);
     expect(result.chartMode).toBe("heatmap");

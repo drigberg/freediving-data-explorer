@@ -794,17 +794,50 @@ function processHeatmapData(
   config: GroupingConfig,
 ): ProcessedData {
   const metric = config.heatmapMetric;
-  const rawCategories: string[] = [];
+  const isMultiPoint = config.timelineVariant === "multiPoint";
 
+  function diveValue(i: number): number {
+    const profile = data.seriesData[i];
+    return metric === "depth"
+      ? Math.abs(getMaxDepth(profile))
+      : getDuration(profile);
+  }
+
+  // For multiPoint with grouping, produce one series per group with color coding
+  if (isMultiPoint && config.groupMode !== "none") {
+    const groups = resolveGroups(data, config);
+    const categories = data.seriesNames.map((name) => name);
+    const points: [number, number][] = data.seriesNames.map((_, i) => [
+      i,
+      Math.round(diveValue(i) * 10) / 10,
+    ]);
+
+    const series: ProcessedSeries[] = groups.map((group) => ({
+      label: group.label,
+      data: group.indices.map((i) => points[i]),
+      primaryDiveIndex: Math.max(...group.indices),
+      diveIndices: group.indices,
+      color:
+        config.groupMode === "discipline"
+          ? getDisciplineColor(disciplineFromGroupLabel(group.label))
+          : undefined,
+    }));
+
+    return {
+      chartMode: "heatmap",
+      heatmapMetric: metric,
+      heatmapDisplayMode: "scatter",
+      heatmapCategories: categories,
+      series,
+    };
+  }
+
+  // Default: single series (for ungrouped multiPoint or heatmap density)
+  const rawCategories: string[] = [];
   const rawPoints: [number, number][] = [];
   for (let i = 0; i < data.seriesNames.length; i++) {
-    const profile = data.seriesData[i];
-    const value =
-      metric === "depth"
-        ? Math.abs(getMaxDepth(profile))
-        : getDuration(profile);
     rawCategories.push(data.seriesNames[i]);
-    rawPoints.push([i, Math.round(value * 10) / 10]);
+    rawPoints.push([i, Math.round(diveValue(i) * 10) / 10]);
   }
 
   const shouldInterpolate = config.timelineVariant === "heatmap";
@@ -812,7 +845,6 @@ function processHeatmapData(
     ? interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS)
     : rawPoints;
 
-  // Build categories for interpolated points
   const categories: string[] = interpolated.map(([x]) => {
     const lo = Math.floor(x);
     const hi = Math.ceil(x);
@@ -821,7 +853,6 @@ function processHeatmapData(
     return frac < 0.5 ? rawCategories[lo] : rawCategories[hi];
   });
 
-  // Re-index interpolated points sequentially
   const points: [number, number][] = interpolated.map(([, y], idx) => [idx, y]);
 
   const series: ProcessedSeries[] = [
