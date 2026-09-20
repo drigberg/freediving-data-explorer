@@ -103,8 +103,8 @@ describe("groupingConfigsEqual", () => {
 describe("matchingGroupingPreset", () => {
   it("matches the personal-bests preset", () => {
     const preset = GROUPING_PRESETS.find((p) => p.id === "personal-bests")!;
-    const filters = resolvePresetFilters(preset.filters, ["CWT", "FIM", "Safety DYNB"]);
-    const match = matchingGroupingPreset(preset.config, filters, ["CWT", "FIM", "Safety DYNB"]);
+    const filters = resolvePresetFilters(preset.filters, ["CWT", "FIM", "Safety CWTB"]);
+    const match = matchingGroupingPreset(preset.config, filters, ["CWT", "FIM", "Safety CWTB"]);
     expect(match).toBeDefined();
     expect(match!.id).toBe("personal-bests");
   });

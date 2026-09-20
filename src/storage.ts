@@ -205,7 +205,7 @@ function normalizeDiveProfiles(store: DiveStore): {
   };
 }
 
-/** Migrates the old `safety: boolean` field to discipline "Safety (DYNB)". */
+/** Migrates the old `safety: boolean` field to discipline "Safety (CWTB)". */
 function migrateSafetyProperty(store: DiveStore): DiveStore {
   let changed = false;
   const dives = store.dives.map((d) => {

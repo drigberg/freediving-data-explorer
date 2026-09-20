@@ -1,4 +1,4 @@
-export const SAFETY_DYNB_DISCIPLINE = "Safety (DYNB)";
+export const SAFETY_DYNB_DISCIPLINE = "Safety (CWTB)";
 
 export const DISCIPLINES = [
   "Free Immersion",
