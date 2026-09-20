@@ -785,8 +785,11 @@ export default function Chart2D({
       // Density heatmap: 2D KDE directly on raw dive data (no interpolation needed)
       const numYBuckets = 80;
       const maxXBuckets = 200;
-      const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
-      const maxVal = allValues.length > 0 ? Math.max(...allValues) : 1;
+      const rawMinVal = allValues.length > 0 ? Math.min(...allValues) : 0;
+      const rawMaxVal = allValues.length > 0 ? Math.max(...allValues) : 1;
+      const valPadding = (rawMaxVal - rawMinVal || 1) * 0.15;
+      const minVal = Math.max(0, rawMinVal - valPadding * 0.3);
+      const maxVal = rawMaxVal + valPadding;
       const valRange = maxVal - minVal || 1;
       const bucketSize = valRange / numYBuckets;
       const yLabels: string[] = [];
@@ -911,14 +914,21 @@ export default function Chart2D({
         visualMap: {
           min: 0,
           max: maxCount || 1,
-          calculable: false,
-          orient: "horizontal",
-          left: "center",
-          bottom: 0,
+          show: false,
           inRange: {
-            color: ["#0e1726", "#1f6feb", "#58a6ff", "#f0f6fc"],
+            color: [
+              "#0a0a2e",
+              "#1a237e",
+              "#1565c0",
+              "#42a5f5",
+              "#b3e5fc",
+              "#fff9c4",
+              "#ffcc02",
+              "#ff8f00",
+              "#e65100",
+              "#b71c1c",
+            ],
           },
-          textStyle: { color: "#8b949e" },
         },
         series: [
           {
