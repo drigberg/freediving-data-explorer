@@ -797,7 +797,10 @@ function processHeatmapData(
     rawPoints.push([i, Math.round(value * 10) / 10]);
   }
 
-  const interpolated = interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS);
+  const interpolated =
+    config.heatmapDisplayMode === "heatmap"
+      ? interpolateHeatmapPoints(rawPoints, HEATMAP_MIN_POINTS)
+      : rawPoints;
 
   // Build categories for interpolated points
   const categories: string[] = interpolated.map(([x]) => {

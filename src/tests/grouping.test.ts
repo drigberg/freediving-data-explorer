@@ -455,7 +455,7 @@ describe("processData – heatmap view (scatter)", () => {
     expect(result.heatmapDisplayMode).toBe("scatter");
   });
 
-  it("interpolates to at least 20k data points", () => {
+  it("does not interpolate — one data point per dive", () => {
     const cfg: GroupingConfig = {
       ...defaultGroupingConfig(),
       viewMode: "heatmap",
@@ -463,8 +463,8 @@ describe("processData – heatmap view (scatter)", () => {
       heatmapDisplayMode: "scatter",
     };
     const result = processData(data, cfg);
-    expect(result.series[0].data.length).toBeGreaterThanOrEqual(20_000);
-    expect(result.heatmapCategories!.length).toBe(result.series[0].data.length);
+    expect(result.series[0].data.length).toBe(3);
+    expect(result.heatmapCategories!.length).toBe(3);
   });
 
   it("produces a single series containing all original dive indices", () => {
