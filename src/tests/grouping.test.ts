@@ -434,3 +434,180 @@ describe("processData – empty data", () => {
     expect(result.series).toHaveLength(0);
   });
 });
+
+describe("processData – heatmap view (scatter)", () => {
+  const data = makeDiveData([
+    { date: "2026-01-10", num: 1, depth: 20, duration: 60, discipline: "CWT" },
+    { date: "2026-01-10", num: 2, depth: 30, duration: 80, discipline: "FIM" },
+    { date: "2026-02-15", num: 3, depth: 25, duration: 100, discipline: "CWT" },
+  ]);
+
+  it("produces heatmap chart mode with scatter display", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    expect(result.chartMode).toBe("heatmap");
+    expect(result.heatmapMetric).toBe("depth");
+    expect(result.heatmapDisplayMode).toBe("scatter");
+  });
+
+  it("has one category per dive", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    expect(result.heatmapCategories).toHaveLength(3);
+    expect(result.heatmapCategories![0]).toBe("2026-01-10 #1");
+    expect(result.heatmapCategories![2]).toBe("2026-02-15 #3");
+  });
+
+  it("produces a single series containing all dives", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    expect(result.series).toHaveLength(1);
+    expect(result.series[0].diveIndices).toEqual([0, 1, 2]);
+    expect(result.series[0].label).toBe("All dives");
+  });
+
+  it("data points contain depth values", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    const points = result.series[0].data;
+    expect(points).toHaveLength(3);
+    expect(points[0][0]).toBe(0);
+    expect(points[0][1]).toBe(20);
+    expect(points[1][1]).toBe(30);
+    expect(points[2][1]).toBe(25);
+  });
+
+  it("data points contain duration values when metric is duration", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "duration",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    const points = result.series[0].data;
+    expect(points).toHaveLength(3);
+    expect(points[0][1]).toBe(60);
+    expect(points[1][1]).toBe(80);
+    expect(points[2][1]).toBe(100);
+  });
+});
+
+describe("processData – heatmap view (density)", () => {
+  const data = makeDiveData([
+    { date: "2026-01-10", num: 1, depth: 20, duration: 60 },
+    { date: "2026-01-10", num: 2, depth: 20, duration: 60 },
+    { date: "2026-01-11", num: 3, depth: 30, duration: 80 },
+    { date: "2026-01-12", num: 4, depth: 40, duration: 120 },
+  ]);
+
+  it("produces heatmap chart mode with heatmap display", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "heatmap",
+    };
+    const result = processData(data, cfg);
+    expect(result.chartMode).toBe("heatmap");
+    expect(result.heatmapDisplayMode).toBe("heatmap");
+  });
+
+  it("still has one data point per dive in the series", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "heatmap",
+    };
+    const result = processData(data, cfg);
+    expect(result.series[0].data).toHaveLength(4);
+  });
+});
+
+describe("processData – heatmap ignores grouping/aggregation", () => {
+  const data = makeDiveData([
+    { date: "2026-01-10", num: 1, depth: 20, duration: 60, discipline: "CWT" },
+    { date: "2026-01-10", num: 2, depth: 30, duration: 80, discipline: "FIM" },
+  ]);
+
+  it("ignores groupMode and still produces one series", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      groupMode: "discipline",
+      aggregationMode: "distance",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    expect(result.chartMode).toBe("heatmap");
+    expect(result.series).toHaveLength(1);
+    expect(result.series[0].diveIndices).toEqual([0, 1]);
+  });
+});
+
+describe("processData – heatmap with empty data", () => {
+  const emptyData: DiveData = {
+    seriesNames: [],
+    datetimes: [],
+    diveNumbers: [],
+    seriesData: [],
+    disciplines: [],
+    weights: [],
+    exposureSuits: [],
+  };
+
+  it("returns empty categories and a single empty series", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(emptyData, cfg);
+    expect(result.chartMode).toBe("heatmap");
+    expect(result.heatmapCategories).toEqual([]);
+    expect(result.series).toHaveLength(1);
+    expect(result.series[0].data).toHaveLength(0);
+  });
+});
+
+describe("processData – heatmap with single dive", () => {
+  const data = makeDiveData([
+    { date: "2026-03-01", num: 1, depth: 15, duration: 45 },
+  ]);
+
+  it("produces exactly one data point", () => {
+    const cfg: GroupingConfig = {
+      ...defaultGroupingConfig(),
+      viewMode: "heatmap",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
+    };
+    const result = processData(data, cfg);
+    expect(result.series[0].data).toHaveLength(1);
+    expect(result.series[0].data[0]).toEqual([0, 15]);
+    expect(result.heatmapCategories).toEqual(["2026-03-01 #1"]);
+  });
+});

@@ -23,7 +23,9 @@ export type TemperatureMode = "max" | "min" | "difference";
 export type DisplayMode = "average" | "maximum";
 export type RankCriterion = "longest" | "deepest";
 export type AggregationMode = "none" | "distance" | "duration";
-export type ChartViewMode = "diveProfile" | "timeline";
+export type ChartViewMode = "diveProfile" | "timeline" | "heatmap";
+export type HeatmapMetric = "depth" | "duration";
+export type HeatmapDisplayMode = "scatter" | "heatmap";
 
 export interface GroupingConfig {
   viewMode: ChartViewMode;
@@ -34,6 +36,8 @@ export interface GroupingConfig {
   displayMode: DisplayMode;
   maximumCriterion: RankCriterion;
   aggregationMode: AggregationMode;
+  heatmapMetric: HeatmapMetric;
+  heatmapDisplayMode: HeatmapDisplayMode;
 }
 
 export interface Tag {
@@ -56,10 +60,16 @@ export interface ProcessedSeries {
 }
 
 export interface ProcessedData {
-  chartMode: "line" | "bar" | "timeline";
+  chartMode: "line" | "bar" | "timeline" | "heatmap";
   aggregationMetric?: "distance" | "duration";
   timelineMetric?: "depth" | "duration";
   timelineCategories?: string[];
+  /** For heatmap mode: the metric shown per data point. */
+  heatmapMetric?: HeatmapMetric;
+  /** For heatmap mode: whether to render individual dots or a density heatmap. */
+  heatmapDisplayMode?: HeatmapDisplayMode;
+  /** For heatmap mode: date-string categories on the x-axis, one per dive. */
+  heatmapCategories?: string[];
   series: ProcessedSeries[];
 }
 
@@ -73,6 +83,8 @@ export function defaultGroupingConfig(): GroupingConfig {
     displayMode: "maximum",
     maximumCriterion: "deepest",
     aggregationMode: "none",
+    heatmapMetric: "depth",
+    heatmapDisplayMode: "scatter",
   };
 }
 
@@ -112,6 +124,8 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "deepest",
       aggregationMode: "none",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
     },
     filters: (disciplines) => ({
       disciplines: disciplines.filter((d) => !isSafetyDynbDiscipline(d)),
@@ -129,6 +143,8 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "longest",
       aggregationMode: "none",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
     },
   },
   {
@@ -143,6 +159,8 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "average",
       maximumCriterion: "longest",
       aggregationMode: "none",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
     },
   },
   {
@@ -157,6 +175,8 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "average",
       maximumCriterion: "longest",
       aggregationMode: "distance",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
     },
   },
   {
@@ -171,6 +191,8 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "longest",
       aggregationMode: "none",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
     },
   },
   {
@@ -185,6 +207,8 @@ export const GROUPING_PRESETS: GroupingPreset[] = [
       displayMode: "maximum",
       maximumCriterion: "deepest",
       aggregationMode: "none",
+      heatmapMetric: "depth",
+      heatmapDisplayMode: "scatter",
     },
   },
 ];
@@ -201,7 +225,9 @@ export function groupingConfigsEqual(
     a.temperatureMode === b.temperatureMode &&
     a.displayMode === b.displayMode &&
     a.maximumCriterion === b.maximumCriterion &&
-    a.aggregationMode === b.aggregationMode
+    a.aggregationMode === b.aggregationMode &&
+    a.heatmapMetric === b.heatmapMetric &&
+    a.heatmapDisplayMode === b.heatmapDisplayMode
   );
 }
 
@@ -726,6 +752,43 @@ function processTimelineData(
   };
 }
 
+function processHeatmapData(
+  data: DiveData,
+  config: GroupingConfig,
+): ProcessedData {
+  const metric = config.heatmapMetric;
+  const categories: string[] = [];
+
+  const points: [number, number][] = [];
+  for (let i = 0; i < data.seriesNames.length; i++) {
+    const profile = data.seriesData[i];
+    const value =
+      metric === "depth"
+        ? Math.abs(getMaxDepth(profile))
+        : getDuration(profile);
+    categories.push(data.seriesNames[i]);
+    points.push([i, Math.round(value * 10) / 10]);
+  }
+
+  const series: ProcessedSeries[] = [
+    {
+      label: "All dives",
+      data: points,
+      primaryDiveIndex: data.seriesNames.length - 1,
+      diveIndices: data.seriesNames.map((_, i) => i),
+      color: undefined,
+    },
+  ];
+
+  return {
+    chartMode: "heatmap",
+    heatmapMetric: metric,
+    heatmapDisplayMode: config.heatmapDisplayMode,
+    heatmapCategories: categories,
+    series,
+  };
+}
+
 // ── Main processing ──
 
 function resolveGroups(data: DiveData, config: GroupingConfig): Group[] {
@@ -797,6 +860,10 @@ export function processData(
   data: DiveData,
   config: GroupingConfig,
 ): ProcessedData {
+  if (config.viewMode === "heatmap") {
+    return processHeatmapData(data, config);
+  }
+
   if (config.viewMode === "timeline") {
     return processTimelineData(data, config);
   }

@@ -354,10 +354,14 @@ export default function Chart2D({
     aggregationMetric,
     timelineMetric,
     timelineCategories,
+    heatmapMetric,
+    heatmapDisplayMode,
+    heatmapCategories,
   } = processed;
   const isSingleDive = variant === "single";
   const isBarChart = chartMode === "bar";
   const isTimeline = chartMode === "timeline";
+  const isHeatmap = chartMode === "heatmap";
   const viewMode = groupingConfig?.viewMode ?? "diveProfile";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
   const [hoveringLine, setHoveringLine] = useState(false);
@@ -454,6 +458,7 @@ export default function Chart2D({
         groupingConfig.groupMode === "dateInterval"
           ? { groupMode: "none" }
           : {}),
+        ...(nextViewMode === "heatmap" ? { groupMode: "none" } : {}),
       });
     },
     [groupingConfig, onGroupingConfigChange],
@@ -690,6 +695,203 @@ export default function Chart2D({
 
     if (isSingleDive) {
       return {};
+    }
+
+    if (isHeatmap && heatmapCategories) {
+      const yAxisName =
+        heatmapMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+      const isScatter = heatmapDisplayMode === "scatter";
+      const allValues = series[0]?.data.map(([, v]) => v) ?? [];
+
+      if (isScatter) {
+        return {
+          backgroundColor: "transparent",
+          tooltip: {
+            trigger: "item",
+            backgroundColor: "rgba(13, 17, 23, 0.9)",
+            borderColor: ACTIVE_LINE_COLOR,
+            borderWidth: 1,
+            textStyle: { color: "#e6edf3", fontSize: 12 },
+            formatter: (params: any) => {
+              const idx = params.dataIndex ?? 0;
+              const label = heatmapCategories[idx] ?? "";
+              const val = params.value?.[1] ?? 0;
+              const formatted =
+                heatmapMetric === "duration"
+                  ? `${val.toFixed(1)} s`
+                  : `${val.toFixed(1)} m`;
+              return `${label}<br/>${formatted}`;
+            },
+          },
+          grid: {
+            left: isMobile ? 44 : 60,
+            right: isMobile ? 8 : 24,
+            top: isMobile ? 16 : 24,
+            bottom: isMobile ? 52 : 60,
+          },
+          xAxis: {
+            type: "category",
+            data: heatmapCategories,
+            name: isMobile ? "" : "Dive",
+            nameLocation: "middle",
+            nameGap: isMobile ? 36 : 42,
+            nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+            axisLine: { lineStyle: { color: "#30363d" } },
+            axisLabel: {
+              color: "#8b949e",
+              rotate: heatmapCategories.length > 12 ? 45 : 0,
+              interval: Math.max(0, Math.floor(heatmapCategories.length / 20)),
+            },
+            splitLine: { show: false },
+          },
+          yAxis: {
+            type: "value",
+            name: isMobile ? "" : yAxisName,
+            nameLocation: "middle",
+            nameGap: isMobile ? 38 : 48,
+            nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+            axisLine: { lineStyle: { color: "#30363d" } },
+            axisLabel: { color: "#8b949e" },
+            splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+          },
+          series: [
+            {
+              type: "scatter" as const,
+              data: series[0]?.data.map(([catIdx, val]) => [catIdx, val]) ?? [],
+              symbolSize: isMobile ? 6 : 8,
+              itemStyle: {
+                color: series[0]?.color ?? getSeriesColor(0, 1),
+                opacity: 0.8,
+              },
+            },
+          ],
+          animation: false,
+        };
+      }
+
+      // Density heatmap: bucket dive indices on x-axis, value buckets on y-axis
+      const numYBuckets = 10;
+      const minVal = allValues.length > 0 ? Math.min(...allValues) : 0;
+      const maxVal = allValues.length > 0 ? Math.max(...allValues) : 1;
+      const bucketSize = (maxVal - minVal) / numYBuckets || 1;
+      const yLabels: string[] = [];
+      for (let b = 0; b < numYBuckets; b++) {
+        const lo = minVal + b * bucketSize;
+        const hi = lo + bucketSize;
+        yLabels.push(
+          heatmapMetric === "duration"
+            ? `${lo.toFixed(0)}–${hi.toFixed(0)}s`
+            : `${lo.toFixed(1)}–${hi.toFixed(1)}m`,
+        );
+      }
+
+      // Group x-axis into date-based buckets (≤30)
+      const maxXBuckets = 30;
+      const xBucketSize = Math.max(
+        1,
+        Math.ceil(heatmapCategories.length / maxXBuckets),
+      );
+      const xBucketLabels: string[] = [];
+      const xBucketCount = Math.ceil(heatmapCategories.length / xBucketSize);
+      for (let b = 0; b < xBucketCount; b++) {
+        const startIdx = b * xBucketSize;
+        const cat = heatmapCategories[startIdx];
+        xBucketLabels.push(cat.slice(0, 10));
+      }
+
+      const heatData: [number, number, number][] = [];
+      const grid = Array.from({ length: xBucketCount }, () =>
+        new Array<number>(numYBuckets).fill(0),
+      );
+      for (const [catIdx, val] of series[0]?.data ?? []) {
+        const xBucket = Math.min(
+          Math.floor(catIdx / xBucketSize),
+          xBucketCount - 1,
+        );
+        const yBucket = Math.min(
+          Math.floor((val - minVal) / bucketSize),
+          numYBuckets - 1,
+        );
+        grid[xBucket][yBucket]++;
+      }
+      let maxCount = 0;
+      for (let x = 0; x < xBucketCount; x++) {
+        for (let y = 0; y < numYBuckets; y++) {
+          heatData.push([x, y, grid[x][y]]);
+          if (grid[x][y] > maxCount) maxCount = grid[x][y];
+        }
+      }
+
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "item",
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          borderColor: ACTIVE_LINE_COLOR,
+          borderWidth: 1,
+          textStyle: { color: "#e6edf3", fontSize: 12 },
+          formatter: (params: any) => {
+            const [xIdx, yIdx, count] = params.value ?? [0, 0, 0];
+            return `${xBucketLabels[xIdx] ?? ""}<br/>${yLabels[yIdx] ?? ""}<br/>Count: ${count}`;
+          },
+        },
+        grid: {
+          left: isMobile ? 64 : 90,
+          right: isMobile ? 24 : 40,
+          top: isMobile ? 16 : 24,
+          bottom: isMobile ? 52 : 60,
+        },
+        xAxis: {
+          type: "category",
+          data: xBucketLabels,
+          name: isMobile ? "" : "Date",
+          nameLocation: "middle",
+          nameGap: isMobile ? 36 : 42,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: {
+            color: "#8b949e",
+            rotate: xBucketLabels.length > 12 ? 45 : 0,
+            interval: 0,
+          },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "category",
+          data: yLabels,
+          name: isMobile ? "" : yAxisName,
+          nameLocation: "middle",
+          nameGap: isMobile ? 54 : 72,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: { color: "#8b949e" },
+          splitLine: { show: false },
+        },
+        visualMap: {
+          min: 0,
+          max: maxCount || 1,
+          calculable: true,
+          orient: "horizontal",
+          left: "center",
+          bottom: 0,
+          inRange: {
+            color: ["#0e1726", "#1f6feb", "#58a6ff", "#f0f6fc"],
+          },
+          textStyle: { color: "#8b949e" },
+        },
+        series: [
+          {
+            type: "heatmap" as const,
+            data: heatData,
+            label: { show: false },
+            itemStyle: {
+              borderColor: "rgba(13, 17, 23, 0.6)",
+              borderWidth: 1,
+            },
+          },
+        ],
+        animation: false,
+      };
     }
 
     if (isTimeline && timelineCategories) {
@@ -970,7 +1172,11 @@ export default function Chart2D({
     aggregationMetric,
     clampedActive,
     groupingConfig?.groupMode,
+    heatmapCategories,
+    heatmapDisplayMode,
+    heatmapMetric,
     isBarChart,
+    isHeatmap,
     isMobile,
     isTimeline,
     series,
@@ -1149,6 +1355,12 @@ export default function Chart2D({
       return "Depth (m) vs Time (sec)";
     }
 
+    if (isHeatmap && heatmapMetric) {
+      const yAxisName =
+        heatmapMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+      return `${yAxisName} vs Dive`;
+    }
+
     if (isTimeline && timelineMetric) {
       const yAxisName =
         timelineMetric === "duration" ? "Duration (sec)" : "Depth (m)";
@@ -1198,7 +1410,7 @@ export default function Chart2D({
 
   return (
     <div
-      className={`chart-container${isTimeline ? " chart-container--timeline" : ""}`}
+      className={`chart-container${isTimeline ? " chart-container--timeline" : ""}${isHeatmap ? " chart-container--heatmap" : ""}`}
     >
       {groupingConfig && onGroupingConfigChange && (
         <div className="chart-view-toolbar">
@@ -1217,10 +1429,17 @@ export default function Chart2D({
             >
               Timeline
             </button>
+            <button
+              type="button"
+              className={viewMode === "heatmap" ? "active" : ""}
+              onClick={() => handleViewModeChange("heatmap")}
+            >
+              Heatmap
+            </button>
           </div>
         </div>
       )}
-      {!isTimeline && (
+      {!isTimeline && !isHeatmap && (
         <div className="selected-dive-info">
           <div className="selected-dive-label">
             Selected: <strong>{activeSeries.label}</strong>
@@ -1229,7 +1448,7 @@ export default function Chart2D({
         </div>
       )}
       <div
-        className={`chart-plot${!isBarChart && !isTimeline && hoveringLine ? " chart-plot--hover-line" : ""}`}
+        className={`chart-plot${!isBarChart && !isTimeline && !isHeatmap && hoveringLine ? " chart-plot--hover-line" : ""}`}
       >
         <ReactECharts
           option={option}
