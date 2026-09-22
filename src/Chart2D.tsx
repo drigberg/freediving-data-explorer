@@ -954,7 +954,9 @@ export default function Chart2D({
 
     if (isTimeline && timelineCategories) {
       const yAxisName =
-        timelineMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+        timelineMetric === "duration" ? "Duration (sec)"
+        : timelineMetric === "area" ? "Depth × Duration (m·s)"
+        : "Depth (m)";
       const showLegend =
         groupingConfig?.groupMode !== "none" && series.length > 1;
 
@@ -969,7 +971,9 @@ export default function Chart2D({
           valueFormatter: (value) =>
             timelineMetric === "duration"
               ? formatDurationTooltip(value)
-              : formatDepthTooltip(value),
+              : timelineMetric === "area"
+                ? `${Number(value).toFixed(1)} m·s`
+                : formatDepthTooltip(value),
         },
         legend: showLegend
           ? {
@@ -1422,7 +1426,9 @@ export default function Chart2D({
 
     if (isTimeline && timelineMetric) {
       const yAxisName =
-        timelineMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+        timelineMetric === "duration" ? "Duration (sec)"
+        : timelineMetric === "area" ? "Depth × Duration (m·s)"
+        : "Depth (m)";
       return `${yAxisName} vs Time interval`;
     }
 

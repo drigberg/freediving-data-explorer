@@ -139,7 +139,7 @@ export default function GroupingControls({
             labels={{
               depth: "Depth",
               duration: "Duration",
-              depthDuration: "Depth × Duration",
+              depthDuration: "Duration At Depth",
             }}
           />
         </div>
@@ -236,16 +236,16 @@ export default function GroupingControls({
           </div>
         )}
 
-        {(isTimeline ||
-          (config.groupMode !== "none" && config.aggregationMode === "none")) && (
+        {(!isMultiPointOrHeatmap && (isTimeline ||
+          (config.groupMode !== "none" && config.aggregationMode === "none"))) && (
           <>
             <div className="grouping-row">
               <span className="grouping-label">Display</span>
               <SegmentButtons<DisplayMode>
-                options={["maximum", "average"]}
+                options={isTimeline ? ["maximum", "average", "area"] : ["maximum", "average"]}
                 value={config.displayMode}
                 onChange={(displayMode) => update({ displayMode })}
-                labels={{ average: "Average", maximum: "Maximum" }}
+                labels={{ average: "Average", maximum: "Maximum", area: "Depth × Duration" }}
               />
             </div>
 

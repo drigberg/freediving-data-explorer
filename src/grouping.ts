@@ -20,7 +20,7 @@ export type GroupMode =
 export type DateIntervalUnit = "day" | "week" |"month" | "quarter" | "year";
 export type TemperatureIncrement = 1 | 5 | 10;
 export type TemperatureMode = "max" | "min" | "difference";
-export type DisplayMode = "average" | "maximum";
+export type DisplayMode = "average" | "maximum" | "area";
 export type RankCriterion = "longest" | "deepest";
 export type AggregationMode = "none" | "distance" | "duration";
 export type ChartViewMode = "diveProfile" | "timeline";
@@ -66,7 +66,7 @@ export interface ProcessedSeries {
 export interface ProcessedData {
   chartMode: "line" | "bar" | "timeline" | "heatmap";
   aggregationMetric?: "distance" | "duration";
-  timelineMetric?: "depth" | "duration";
+  timelineMetric?: "depth" | "duration" | "area";
   timelineCategories?: string[];
   /** For heatmap mode: the metric shown per data point. */
   heatmapMetric?: HeatmapMetric;
@@ -285,6 +285,24 @@ function getDuration(points: ProfilePoint[]): number {
 function getMaxDepth(points: ProfilePoint[]): number {
   if (points.length === 0) return 0;
   return Math.min(...points.map(([, d]) => d));
+}
+
+/**
+ * Approximate area under the dive profile (depth × time) using the trapezoidal rule.
+ * For each timestep, averages the absolute depths at the current and next point,
+ * multiplied by the time delta. Result is in metre-seconds.
+ */
+export function computeProfileArea(profile: ProfilePoint[]): number {
+  if (profile.length < 2) return 0;
+  let area = 0;
+  for (let i = 0; i < profile.length - 1; i++) {
+    const [t0, d0] = profile[i];
+    const [t1, d1] = profile[i + 1];
+    const dt = t1 - t0;
+    if (dt <= 0) continue;
+    area += dt * (Math.abs(d0) + Math.abs(d1)) / 2;
+  }
+  return Math.round(area * 10) / 10;
 }
 
 const DEPTH_SLICE_GRANULARITY = 0.25;
@@ -704,7 +722,8 @@ function collectDateIntervals(
   );
 }
 
-function timelineMetric(config: GroupingConfig): "depth" | "duration" {
+function timelineMetric(config: GroupingConfig): "depth" | "duration" | "area" {
+  if (config.displayMode === "area") return "area";
   if (config.displayMode === "average") return "depth";
   return config.maximumCriterion === "longest" ? "duration" : "depth";
 }
@@ -716,6 +735,13 @@ function metricForInterval(
 ): { value: number; primaryIndex: number } {
   if (indices.length === 0) {
     return { value: 0, primaryIndex: 0 };
+  }
+  if (config.displayMode === "area") {
+    const value = indices.reduce(
+      (sum, i) => sum + computeProfileArea(seriesData[i]),
+      0,
+    );
+    return { value, primaryIndex: Math.max(...indices) };
   }
   if (config.displayMode === "average") {
     const value =
