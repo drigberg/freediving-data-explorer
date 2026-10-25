@@ -1,24 +1,41 @@
+Insights I'd like:
+- Compare ascent/descent rates
+
 - Overview:
-  - Allow filtering by temperature range, applied to min, max, or overlap
-  - Allow aggregation in timeline view
-  - Show some sort of calculated chart titles
+  - (!) Show time of day when a dive is expanded
+  - (!) Show some sort of calculated chart titles
+  - Finally get rid of series legend
   - Allow deleting unused tags
   - Set list of default "other" tags
-  - Allow grouping and filtering by custom tags
   - Allow selecting "average + longest" in timeline view
   - Pie chart view: what proportion of dives match the current filters?
     - Grouping determines proportions, filters determine the pool
   - Allow resetting dive numbers, or automatically reset on import
+  - Clear active dive index when archiving
+  - Select ascent/descent rates on timeline view?
+- Grouping and filtering:
+  - Allow filtering and grouping by descent and ascent rates
+  - Allow filtering by temperature range, applied to min, max, or overlap
+  - Allow aggregation in timeline view
+  - Allow grouping and filtering by custom tags
 - Data:
+  - (!) Support P75 and P90 selectors everywhere that avg/max are used
+  - New property: "Face coverage" -> "mask", "nose clip", "nose clip + equalizing goggles"
+  - Automatic hang-time detection
+    - Filter + group by hang time
+    - Display max/average hang time in timeline mode
   - Trimming:
     - Get rid of "keep" and "discard" buttons, OR just set a minimum requirement for regions (Minimum 2m and 5s?)
     - Make "keep" regions more obvious
-  - Allow removing tags from dive-details view
+    - Fix bug where clicking one "keep" button affects multiple/all of them
+  - Allow removing tags in dive-details view
 - Exposure suit options:
   - None
   - Shorty
   - Smoothskin
 - Dive detail mode
+  - Allow archiving from this view
+  - Show time of day
   - Show thermocline somehow?
   - "Visualization mode": show a diver on a vertical line, and move it according to dive data, with "play" and "pause" buttons, plus a slider to click and drag through time.
     - Bonus: bubbles and jellyfish
