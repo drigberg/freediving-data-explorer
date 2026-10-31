@@ -24,7 +24,7 @@ export type DisplayMode = "average" | "maximum" | "area";
 export type RankCriterion = "longest" | "deepest";
 export type AggregationMode = "none" | "distance" | "duration";
 export type ChartViewMode = "diveProfile" | "timeline";
-export type TimelineVariant = "singlePoint" | "multiPoint" | "heatmap";
+export type TimelineVariant = "singlePoint" | "multiPoint" | "distribution" | "rollingMax" | "heatmap";
 export type HeatmapMetric = "depth" | "duration" | "depthDuration";
 export type HeatmapDisplayMode = "scatter" | "heatmap";
 
@@ -63,8 +63,18 @@ export interface ProcessedSeries {
   weights?: number[];
 }
 
+export interface DistributionBoxData {
+  category: string;
+  low: number;
+  q1: number;
+  median: number;
+  q3: number;
+  high: number;
+  outliers: number[];
+}
+
 export interface ProcessedData {
-  chartMode: "line" | "bar" | "timeline" | "heatmap";
+  chartMode: "line" | "bar" | "timeline" | "heatmap" | "distribution" | "rollingMax";
   aggregationMetric?: "distance" | "duration";
   timelineMetric?: "depth" | "duration" | "area";
   timelineCategories?: string[];
@@ -74,6 +84,12 @@ export interface ProcessedData {
   heatmapDisplayMode?: HeatmapDisplayMode;
   /** For heatmap mode: date-string categories on the x-axis, one per dive. */
   heatmapCategories?: string[];
+  /** For distribution mode: box-and-whisker data per time interval. */
+  distributionData?: DistributionBoxData[];
+  /** For distribution mode: the metric being shown. */
+  distributionMetric?: HeatmapMetric;
+  /** For rolling max mode: per-series set of category indices where a new max was set. */
+  rollingMaxNewIndices?: Set<number>[];
   series: ProcessedSeries[];
 }
 
@@ -981,6 +997,157 @@ function processHeatmapData(
   };
 }
 
+function percentile(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+function processRollingMaxData(
+  data: DiveData,
+  config: GroupingConfig,
+): ProcessedData {
+  const allIndices = data.seriesNames.map((_, i) => i);
+  const globalBuckets = collectDateIntervals(
+    data,
+    allIndices,
+    config.dateIntervalUnit,
+  );
+  const categories = globalBuckets.map((b) => b.key);
+  const isLongest = config.maximumCriterion === "longest";
+  const metric: "depth" | "duration" = isLongest ? "duration" : "depth";
+  const primaryGroups = resolvePrimaryGroups(data, config);
+  const showLegend = config.groupMode !== "none";
+
+  const rollingMaxNewIndices: Set<number>[] = [];
+
+  const series: ProcessedSeries[] = primaryGroups.map((group) => {
+    const groupBuckets = collectDateIntervals(
+      data,
+      group.indices,
+      config.dateIntervalUnit,
+    );
+    const bucketMap = new Map(groupBuckets.map((b) => [b.key, b.indices]));
+
+    let primaryDiveIndex = group.indices[0] ?? 0;
+    let runningMax = -Infinity;
+    const newMaxIndices = new Set<number>();
+    const points: [number, number][] = [];
+
+    let started = false;
+    for (let idx = 0; idx < categories.length; idx++) {
+      const cat = categories[idx];
+      const indices = bucketMap.get(cat);
+
+      if (indices?.length) {
+        let intervalBest: number;
+        let bestIndex = indices[0];
+        if (isLongest) {
+          intervalBest = -Infinity;
+          for (const i of indices) {
+            const d = getDuration(data.seriesData[i]);
+            if (d > intervalBest) { intervalBest = d; bestIndex = i; }
+          }
+        } else {
+          intervalBest = -Infinity;
+          for (const i of indices) {
+            const d = Math.abs(getMaxDepth(data.seriesData[i]));
+            if (d > intervalBest) { intervalBest = d; bestIndex = i; }
+          }
+        }
+
+        if (intervalBest > runningMax) {
+          runningMax = intervalBest;
+          newMaxIndices.add(idx);
+          primaryDiveIndex = bestIndex;
+        }
+        started = true;
+      }
+
+      if (!started) continue;
+      const rounded = Math.round(runningMax * 10) / 10;
+      points.push([idx, rounded]);
+    }
+
+    rollingMaxNewIndices.push(newMaxIndices);
+
+    return {
+      label: showLegend ? group.label : "All dives",
+      data: points,
+      primaryDiveIndex,
+      diveIndices: group.indices,
+      color: seriesDisciplineColor(data, config, group, primaryDiveIndex),
+    };
+  });
+
+  return {
+    chartMode: "rollingMax",
+    timelineMetric: metric,
+    timelineCategories: categories,
+    rollingMaxNewIndices,
+    series,
+  };
+}
+
+function processDistributionData(
+  data: DiveData,
+  config: GroupingConfig,
+): ProcessedData {
+  const metric = config.heatmapMetric;
+  const allIndices = data.seriesNames.map((_, i) => i);
+  const dateBuckets = collectDateIntervals(
+    data,
+    allIndices,
+    config.dateIntervalUnit,
+  );
+
+  const distributionData: DistributionBoxData[] = dateBuckets.map((bucket) => {
+    const values = bucket.indices
+      .map((i) => {
+        const profile = data.seriesData[i];
+        return metric === "duration"
+          ? getDuration(profile)
+          : Math.abs(getMaxDepth(profile));
+      })
+      .sort((a, b) => a - b);
+
+    const p10 = percentile(values, 10);
+    const q1 = percentile(values, 25);
+    const median = percentile(values, 50);
+    const q3 = percentile(values, 75);
+    const p90 = percentile(values, 90);
+
+    const outliers = values.filter((v) => v < p10 || v > p90);
+
+    return {
+      category: bucket.key,
+      low: Math.round(p10 * 10) / 10,
+      q1: Math.round(q1 * 10) / 10,
+      median: Math.round(median * 10) / 10,
+      q3: Math.round(q3 * 10) / 10,
+      high: Math.round(p90 * 10) / 10,
+      outliers: outliers.map((v) => Math.round(v * 10) / 10),
+    };
+  });
+
+  return {
+    chartMode: "distribution",
+    distributionData,
+    distributionMetric: metric,
+    series: [
+      {
+        label: "All dives",
+        data: [],
+        primaryDiveIndex: data.seriesNames.length - 1,
+        diveIndices: allIndices,
+      },
+    ],
+  };
+}
+
 // ── Main processing ──
 
 function resolveGroups(data: DiveData, config: GroupingConfig): Group[] {
@@ -1053,6 +1220,12 @@ export function processData(
   config: GroupingConfig,
 ): ProcessedData {
   if (config.viewMode === "timeline") {
+    if (config.timelineVariant === "distribution") {
+      return processDistributionData(data, config);
+    }
+    if (config.timelineVariant === "rollingMax") {
+      return processRollingMaxData(data, config);
+    }
     if (config.timelineVariant === "multiPoint" || config.timelineVariant === "heatmap") {
       return processHeatmapData(data, config);
     }

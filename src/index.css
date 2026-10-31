@@ -217,6 +217,7 @@ body,
     line-height: 1.4;
     color: #e6edf3;
     text-align: left;
+    white-space: normal;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -1880,6 +1881,24 @@ body,
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(13, 17, 23, 0.82);
     backdrop-filter: blur(8px);
+}
+
+.chart-variant-btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.segment-buttons:has(.chart-variant-btn-content) {
+    overflow: visible;
+}
+
+.segment-buttons:has(.chart-variant-btn-content) button:first-child {
+    border-radius: 6px 0 0 6px;
+}
+
+.segment-buttons:has(.chart-variant-btn-content) button:last-child {
+    border-radius: 0 6px 6px 0;
 }
 
 .chart-container.chart-container--single {

@@ -63,9 +63,11 @@ export default function GroupingControls({
     availableDisciplines,
   );
   const isTimeline = config.viewMode === "timeline";
+  const isRollingMax = isTimeline && config.timelineVariant === "rollingMax";
   const isMultiPointOrHeatmap =
     isTimeline &&
     (config.timelineVariant === "multiPoint" ||
+      config.timelineVariant === "distribution" ||
       config.timelineVariant === "heatmap");
 
   const groupModeOptions: GroupMode[] = isTimeline
@@ -131,8 +133,8 @@ export default function GroupingControls({
           <SegmentButtons<HeatmapMetric>
             options={
               config.timelineVariant === "heatmap"
-                ? ["depth", "duration", "depthDuration"]
-                : ["depth", "duration"]
+                ? (["depth", "duration", "depthDuration"] as HeatmapMetric[])
+                : (["depth", "duration"] as HeatmapMetric[])
             }
             value={config.heatmapMetric}
             onChange={(heatmapMetric) => update({ heatmapMetric })}
@@ -145,7 +147,7 @@ export default function GroupingControls({
         </div>
       ) : null}
 
-      {isMultiPointOrHeatmap && config.timelineVariant === "heatmap" ? null : (
+      {isMultiPointOrHeatmap && (config.timelineVariant === "heatmap" || config.timelineVariant === "distribution") ? null : (
       <div className="grouping-manual">
         <div className="grouping-row">
           <span className="grouping-label">Group by</span>
@@ -236,7 +238,17 @@ export default function GroupingControls({
           </div>
         )}
 
-        {(!isMultiPointOrHeatmap && (isTimeline ||
+        {isRollingMax ? (
+          <div className="grouping-row">
+            <span className="grouping-label">Pick</span>
+            <SegmentButtons<RankCriterion>
+              options={["deepest", "longest"]}
+              value={config.maximumCriterion}
+              onChange={(maximumCriterion) => update({ maximumCriterion })}
+              labels={{ longest: "Longest", deepest: "Deepest" }}
+            />
+          </div>
+        ) : (!isMultiPointOrHeatmap && (isTimeline ||
           (config.groupMode !== "none" && config.aggregationMode === "none"))) && (
           <>
             <div className="grouping-row">

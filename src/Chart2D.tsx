@@ -357,12 +357,17 @@ export default function Chart2D({
     heatmapMetric,
     heatmapDisplayMode,
     heatmapCategories,
+    distributionData,
+    distributionMetric,
+    rollingMaxNewIndices,
   } = processed;
   const isSingleDive = variant === "single";
   const isBarChart = chartMode === "bar";
   const isTimeline = chartMode === "timeline";
   const isHeatmap = chartMode === "heatmap";
-  const isTimelineOrHeatmap = isTimeline || isHeatmap;
+  const isDistribution = chartMode === "distribution";
+  const isRollingMax = chartMode === "rollingMax";
+  const isTimelineOrHeatmap = isTimeline || isHeatmap || isDistribution || isRollingMax;
   const timelineVariant = groupingConfig?.timelineVariant ?? "singlePoint";
   const viewMode = groupingConfig?.viewMode ?? "diveProfile";
   const [activeIndex, setActiveIndex] = useState(series.length - 1);
@@ -763,10 +768,11 @@ export default function Chart2D({
               type: "scatter" as const,
               name: s.label,
               data: s.data.map(([catIdx, val]) => [catIdx, val]),
-              symbolSize: isMobile ? 6 : 8,
+              symbolSize: isMobile ? 3 : 4,
               itemStyle: {
-                color: s.color ?? getSeriesColor(idx, series.length),
-                opacity: 0.8,
+                color: s.color ? colorWithAlpha(s.color, 0.7) : getSeriesColorRgba(idx, series.length, 0.7),
+                borderColor: s.color ?? getSeriesColor(idx, series.length),
+                borderWidth: 1,
               },
             })),
           legend:
@@ -948,6 +954,234 @@ export default function Chart2D({
             },
           },
         ],
+        animation: false,
+      };
+    }
+
+    if (isDistribution && distributionData && distributionData.length > 0) {
+      const yAxisName =
+        distributionMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+      const categories = distributionData.map((d) => d.category);
+      const boxData = distributionData.map((d) => [
+        d.low,
+        d.q1,
+        d.median,
+        d.q3,
+        d.high,
+      ]);
+      const outlierData: [number, number][] = [];
+      for (let i = 0; i < distributionData.length; i++) {
+        for (const v of distributionData[i].outliers) {
+          outlierData.push([i, v]);
+        }
+      }
+
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "item",
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          borderColor: ACTIVE_LINE_COLOR,
+          borderWidth: 1,
+          textStyle: { color: "#e6edf3", fontSize: 12 },
+          formatter: (params: any) => {
+            if (params.componentSubType === "scatter") {
+              const catIdx = params.value?.[0] ?? 0;
+              const val = params.value?.[1] ?? 0;
+              const unit = distributionMetric === "duration" ? "s" : "m";
+              return `${categories[catIdx] ?? ""}<br/>Outlier: ${val.toFixed(1)} ${unit}`;
+            }
+            const catIdx = params.dataIndex ?? 0;
+            const d = distributionData[catIdx];
+            if (!d) return "";
+            const unit = distributionMetric === "duration" ? "s" : "m";
+            return [
+              `<strong>${d.category}</strong>`,
+              `P90: ${d.high.toFixed(1)} ${unit}`,
+              `P75: ${d.q3.toFixed(1)} ${unit}`,
+              `P50: ${d.median.toFixed(1)} ${unit}`,
+              `P25: ${d.q1.toFixed(1)} ${unit}`,
+              `P10: ${d.low.toFixed(1)} ${unit}`,
+            ].join("<br/>");
+          },
+        },
+        grid: {
+          left: isMobile ? 44 : 60,
+          right: isMobile ? 8 : 24,
+          top: isMobile ? 16 : 24,
+          bottom:
+            categories.length > 8
+              ? isMobile
+                ? 52
+                : 60
+              : isMobile
+                ? 32
+                : 40,
+        },
+        xAxis: {
+          type: "category",
+          data: categories,
+          name: isMobile ? "" : "Time interval",
+          nameLocation: "middle",
+          nameGap:
+            categories.length > 8
+              ? isMobile
+                ? 36
+                : 42
+              : isMobile
+                ? 22
+                : 28,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: {
+            color: "#8b949e",
+            rotate: categories.length > 8 ? 35 : 0,
+            interval: 0,
+          },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "value",
+          name: isMobile ? "" : yAxisName,
+          nameLocation: "middle",
+          nameGap: isMobile ? 38 : 48,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: { color: "#8b949e" },
+          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+        },
+        series: [
+          {
+            type: "boxplot" as const,
+            data: boxData,
+            itemStyle: {
+              color: "rgba(88, 166, 255, 0.15)",
+              borderColor: "#58a6ff",
+              borderWidth: 1.5,
+            },
+            emphasis: {
+              itemStyle: {
+                borderColor: "#79c0ff",
+                borderWidth: 2,
+                shadowBlur: 8,
+                shadowColor: "rgba(88, 166, 255, 0.4)",
+              },
+            },
+          },
+          {
+            type: "scatter" as const,
+            data: outlierData,
+            symbolSize: isMobile ? 5 : 7,
+            itemStyle: {
+              color: "rgba(88, 166, 255, 0.6)",
+              borderColor: "#58a6ff",
+              borderWidth: 1,
+            },
+          },
+        ],
+        animation: false,
+      };
+    }
+
+    if (isRollingMax && timelineCategories) {
+      const yAxisName = timelineMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+      const showLegend =
+        groupingConfig?.groupMode !== "none" && series.length > 1;
+
+      return {
+        backgroundColor: "transparent",
+        tooltip: {
+          trigger: "axis",
+          backgroundColor: "rgba(13, 17, 23, 0.9)",
+          borderColor: ACTIVE_LINE_COLOR,
+          borderWidth: 1,
+          textStyle: { color: "#e6edf3", fontSize: 12 },
+          valueFormatter: (value) =>
+            timelineMetric === "duration"
+              ? formatDurationTooltip(value)
+              : formatDepthTooltip(value),
+        },
+        legend: showLegend
+          ? {
+              data: series.map((s) => s.label),
+              textStyle: { color: "#8b949e", fontSize: 11 },
+              top: 4,
+              type: "scroll",
+              pageTextStyle: { color: "#8b949e" },
+            }
+          : undefined,
+        grid: {
+          left: isMobile ? 44 : 60,
+          right: isMobile ? 8 : 24,
+          top: showLegend ? (isMobile ? 44 : 50) : isMobile ? 16 : 24,
+          bottom:
+            timelineCategories.length > 8
+              ? isMobile ? 52 : 60
+              : isMobile ? 32 : 40,
+        },
+        xAxis: {
+          type: "category",
+          data: timelineCategories,
+          name: isMobile ? "" : "Time interval",
+          nameLocation: "middle",
+          nameGap:
+            timelineCategories.length > 8
+              ? isMobile ? 36 : 42
+              : isMobile ? 22 : 28,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: {
+            color: "#8b949e",
+            rotate: timelineCategories.length > 8 ? 35 : 0,
+            interval: 0,
+          },
+          splitLine: { show: false },
+        },
+        yAxis: {
+          type: "value",
+          name: isMobile ? "" : yAxisName,
+          nameLocation: "middle",
+          nameGap: isMobile ? 38 : 48,
+          nameTextStyle: { color: "#8b949e", fontSize: isMobile ? 11 : 13 },
+          axisLine: { lineStyle: { color: "#30363d" } },
+          axisLabel: { color: "#8b949e" },
+          splitLine: { lineStyle: { color: "rgba(48, 54, 61, 0.4)" } },
+        },
+        series: series.map((s, i) => {
+          const opacity = getSeriesOpacity(i, clampedActive, total);
+          const isActive = i === clampedActive;
+          const color = resolveColor(i);
+          const shadowColor = resolveShadowColor(i);
+          const newMaxSet = rollingMaxNewIndices?.[i];
+
+          const fullData = timelineCategories.map((_, catIdx) => {
+            const point = s.data.find(([idx]) => idx === catIdx);
+            return point?.[1] ?? null;
+          });
+
+          return {
+            name: s.label,
+            type: "line" as const,
+            step: "end" as const,
+            data: fullData,
+            connectNulls: true,
+            showSymbol: true,
+            symbolSize: (value: number, params: any) => {
+              if (value == null) return 0;
+              return newMaxSet?.has(params.dataIndex) ? (isActive ? 8 : 5) : 0;
+            },
+            triggerLineEvent: true,
+            itemStyle: { color, opacity: isActive ? 1 : opacity },
+            lineStyle: {
+              width: isActive ? mobileLineWidthActive : mobileLineWidthInactive,
+              color,
+              opacity: isActive ? 1 : opacity,
+              shadowBlur: isActive ? 16 : 8,
+              shadowColor,
+            },
+            z: isActive ? 10 : 1,
+          };
+        }),
         animation: false,
       };
     }
@@ -1233,15 +1467,20 @@ export default function Chart2D({
   }, [
     aggregationMetric,
     clampedActive,
+    distributionData,
+    distributionMetric,
     groupingConfig?.groupMode,
     heatmapCategories,
     heatmapDisplayMode,
     heatmapMetric,
     isBarChart,
+    isDistribution,
     isHeatmap,
     isMobile,
+    isRollingMax,
     isTimeline,
     isTimelineOrHeatmap,
+    rollingMaxNewIndices,
     series,
     timelineCategories,
     timelineMetric,
@@ -1418,6 +1657,12 @@ export default function Chart2D({
       return "Depth (m) vs Time (sec)";
     }
 
+    if (isDistribution && distributionMetric) {
+      const yAxisName =
+        distributionMetric === "duration" ? "Duration (sec)" : "Depth (m)";
+      return `${yAxisName} vs Time interval`;
+    }
+
     if (isHeatmap && heatmapMetric) {
       const yAxisName =
         heatmapMetric === "duration" ? "Duration (sec)" : "Depth (m)";
@@ -1511,15 +1756,65 @@ export default function Chart2D({
               </button>
               <button
                 type="button"
+                className={timelineVariant === "rollingMax" ? "active" : ""}
+                onClick={() =>
+                  onGroupingConfigChange({
+                    ...groupingConfig,
+                    timelineVariant: "rollingMax",
+                    displayMode: "maximum",
+                  })
+                }
+              >
+                Rolling max
+              </button>
+              <button
+                type="button"
                 className={timelineVariant === "multiPoint" ? "active" : ""}
                 onClick={() =>
                   onGroupingConfigChange({
                     ...groupingConfig,
                     timelineVariant: "multiPoint",
+                    ...(groupingConfig.groupMode === "none"
+                      ? { groupMode: "discipline" }
+                      : {}),
                   })
                 }
               >
                 Multi-point
+              </button>
+              <button
+                type="button"
+                className={timelineVariant === "distribution" ? "active" : ""}
+                onClick={() =>
+                  onGroupingConfigChange({
+                    ...groupingConfig,
+                    timelineVariant: "distribution",
+                    groupMode: "none",
+                  })
+                }
+              >
+                <span className="chart-variant-btn-content">
+                  Distribution
+                  <span
+                    className="info-icon"
+                    aria-label="Distribution plot details"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0ZM7 4.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM6.75 7.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-.75.75h-.5a.75.75 0 0 1-.75-.75v-4.5Z" />
+                    </svg>
+                    <span className="info-tooltip" role="tooltip">
+                      Box-and-whisker plot per interval: P10, P25, P50 (median), P75, P90. Outliers shown as dots.
+                    </span>
+                  </span>
+                </span>
               </button>
               <button
                 type="button"
