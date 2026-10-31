@@ -4,6 +4,10 @@ Insights I'd like:
 - Overview:
   - (!) Show time of day when a dive is expanded
   - (!) Show some sort of calculated chart titles
+  - Add tooltips everywhere!
+    - Include "how to interpret" explanations
+      - Ex: "timeline-distribution mode shows you when your old best is no longer an outlier"
+  - Make presets global again, but turn into a modal with more details for each preset!
   - Finally get rid of series legend
   - Allow deleting unused tags
   - Set list of default "other" tags
